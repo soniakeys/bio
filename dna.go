@@ -45,16 +45,50 @@ func transcribe(s []byte) []byte {
 	return t
 }
 
-// Transcribe returns the RNA transcription of the DNA string.
+// Transcribe returns the RNA transcription of the receiver.
 //
-// A new string is returned.  The original string is unmodified.
+// A new string is returned.  The receiver string is unmodified.
 func (s DNA) Transcribe() RNA {
 	return RNA(transcribe(s))
 }
 
-// Transcribe returns the RNA transcription of the DNAStrict string
+// Transcribe returns the RNA transcription of the receiver.
 //
 // A new string is returned.  The original string is unmodified.
 func (s DNAStrict) Transcribe() RNAStrict {
 	return RNAStrict(transcribe(s))
+}
+
+// ReverseComplement returns the reverse complement of the receiver.
+//
+// A new string is returned.  The receiver is left unmodified.
+// Symbols not in the DNA alphabet are reversed but otherwise left unchanged.
+func (s DNA) ReverseComplement() DNA {
+	rc := make(DNA, len(s))
+	rcx := len(rc)
+	for _, b := range s {
+		switch b | 0x20 {
+		case 'a', 't':
+			b ^= 0x15
+		case 'c', 'g':
+			b ^= 0x04
+		}
+		rcx--
+		rc[rcx] = b
+	}
+	return rc
+}
+
+// ReverseComplement returns the reverse complement of the receiver.
+//
+// A new string is returned.  The receiver is left unmodified.
+func (s DNAStrict) ReverseComplement() DNAStrict {
+	rc := make(DNAStrict, len(s))
+	rcx := len(rc)
+	for _, b := range s {
+		rcx--
+		rc[rcx] = ^b&2>>1*17 | 4 ^ b
+		// it was faster, at least on the machine it was written on.
+	}
+	return rc
 }

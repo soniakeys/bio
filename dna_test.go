@@ -39,3 +39,17 @@ func ExampleDNAStrict_Transcribe() {
 	// bio.DNAStrict Tact
 	// bio.RNAStrict Uacu
 }
+
+func ExampleDNA_ReverseComplement() {
+	s := bio.DNA("Atacama")
+	fmt.Println(s.ReverseComplement())
+	// Output:
+	// tmtgtaT
+}
+
+func ExampleDNAStrict_ReverseComplement() {
+	s := bio.DNAStrict("Atacaga")
+	fmt.Println(s.ReverseComplement())
+	// Output:
+	// tctgtaT
+}
