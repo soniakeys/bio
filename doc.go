@@ -1,2 +1,2 @@
-// Bio is a collection of packages implementing bioinformatics algorithms.
+// Bio is a package of bioinformatics algorithms.
 package bio
