@@ -19,3 +19,23 @@ func ExampleDNAStrict_BaseFreq() {
 	// t 2
 	// g 1
 }
+
+func ExampleDNA_Transcribe() {
+	d := bio.DNA("Tristan")
+	r := d.Transcribe()
+	fmt.Printf("%T %v\n", d, d)
+	fmt.Printf("%T %v\n", r, r)
+	// Output:
+	// bio.DNA Tristan
+	// bio.RNA Urisuan
+}
+
+func ExampleDNAStrict_Transcribe() {
+	d := bio.DNAStrict("Tact")
+	r := d.Transcribe()
+	fmt.Printf("%T %v\n", d, d)
+	fmt.Printf("%T %v\n", r, r)
+	// Output:
+	// bio.DNAStrict Tact
+	// bio.RNAStrict Uacu
+}

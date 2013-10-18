@@ -34,3 +34,27 @@ func (s DNAStrict) String() string {
 func (s DNAStrict) BaseFreq() (a, c, t, g int) {
 	return baseFreq(s)
 }
+
+func transcribe(s []byte) []byte {
+	t := append([]byte{}, s...)
+	for i, b := range t {
+		if b&0xdf == 'T' {
+			t[i]++
+		}
+	}
+	return t
+}
+
+// Transcribe returns the RNA transcription of the DNA string.
+//
+// A new string is returned.  The original string is unmodified.
+func (s DNA) Transcribe() RNA {
+	return RNA(transcribe(s))
+}
+
+// Transcribe returns the RNA transcription of the DNAStrict string
+//
+// A new string is returned.  The original string is unmodified.
+func (s DNAStrict) Transcribe() RNAStrict {
+	return RNAStrict(transcribe(s))
+}
