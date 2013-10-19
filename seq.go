@@ -3,7 +3,10 @@
 
 package bio
 
-import "errors"
+import (
+	"bytes"
+	"errors"
+)
 
 // seq.go
 //
@@ -46,4 +49,20 @@ func Hamming(s, t []byte) (int, error) {
 		}
 	}
 	return h, nil
+}
+
+// AllIndex finds all occurrences of a motif in a sequence.
+//
+// Returned is a list of indexes of all occurrences of motif m in sequence s,
+// including overlapping ones.
+func AllIndex(s, m []byte) (x []int) {
+	for searched := 0; ; {
+		i := bytes.Index(s[searched:], m)
+		if i < 0 {
+			break
+		}
+		searched += i + 1
+		x = append(x, searched)
+	}
+	return
 }
