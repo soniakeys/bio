@@ -53,3 +53,10 @@ func ExampleDNAStrict_ReverseComplement() {
 	// Output:
 	// tctgtaT
 }
+
+func ExampleDNAStrict_CGFraction() {
+	s := bio.DNAStrict("cagggt")
+	fmt.Printf("%.3f\n", s.CGFraction())
+	// Output:
+	// 0.667
+}

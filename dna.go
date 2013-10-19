@@ -92,3 +92,10 @@ func (s DNAStrict) ReverseComplement() DNAStrict {
 	}
 	return rc
 }
+
+// CGFraction returns the fraction of the string that is C or G over the
+// string length.
+func (s DNAStrict) CGFraction() float64 {
+	_, c, _, g := baseFreq(s)
+	return float64(c+g) / float64(len(s))
+}
