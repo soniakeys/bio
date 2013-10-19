@@ -11,16 +11,16 @@ import (
 //
 // Types and methods that are specific to RNA or optimized for RNA.
 
-// RNA type represents a RNA string.
+// RNA type represents a RNA sequence.
 //
 // It is expected to hold RNA base symbols but other symbols are allowed.
 // Methods on the type accomodate non-base symbols.
 type RNA []byte
 
-// RNAStrict type represents a string consisting strictly of RNA symbols.
+// RNAStrict type represents a sequence consisting strictly of RNA symbols.
 //
 // Allowed symbols are ACUGacug.  Methods on the type assume this.  Methods
-// are case-insensitive but may produce nonsense results if the string
+// are case-insensitive but may produce nonsense results if the sequence
 // contains non-base symbols.
 type RNAStrict []byte
 
@@ -58,14 +58,14 @@ func IsRNAStart(s []byte) bool {
 		s[2]&0xdf == RNAStart[2]
 }
 
-// Translate translates RNA and returns an amino acid string.
+// Translate translates RNA and returns an amino acid sequence.
 //
-// Translation begins at the start of the string.  The string should begin
+// Translation begins at the start of the sequence.  The sequence should begin
 // with the RNA start codon.  Translation ends at a stop codon or at the
-// end of the string.
+// end of the sequence.
 //
 // Errors are returned for no start codon and no stop codon but the
-// translated string is returned in any case.
+// translated sequence is returned in any case.
 func (s RNAStrict) Translate() (a AAStrict, err error) {
 	if !IsRNAStart(s) {
 		err = errors.New("No start codon")

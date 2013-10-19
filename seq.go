@@ -14,11 +14,11 @@ import (
 //
 // There is no named type for generalized sequences.  []byte seems enough.
 
-// Freq returns counts of all symbols appearing in a string.
+// Freq returns counts of all symbols appearing in a sequence.
 //
-// The returned map contains a key for each symbol appearing in the string.
-// If a symbol does not appear in the string, there will be no map key for it.
-// Upper and lower case are treated as distinct.  If a string contains both
+// The returned map contains a key for each symbol appearing in the sequence.
+// If a symbol does not appear in the sequence, there will be no map key for it.
+// Upper and lower case are treated as distinct.  If a sequence contains both
 // 'A' and 'a' the result will contain separate counts for the two symbols.
 func Freq(s []byte) map[byte]int {
 	m := map[byte]int{}

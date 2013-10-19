@@ -7,16 +7,16 @@ package bio
 //
 // Types and methods that are specific to DNA or optimized for DNA.
 
-// DNA type represents a DNA string.
+// DNA type represents a DNA sequence.
 //
 // It is expected to hold DNA base symbols but other symbols are allowed.
 // Methods on the type accomodate non-base symbols.
 type DNA []byte
 
-// DNAStrict type represents a string consisting strictly of DNA symbols.
+// DNAStrict type represents a sequence consisting strictly of DNA symbols.
 //
 // Allowed symbols are ACTGactg.  Methods on the type assume this.  Methods
-// are case-insensitive but may produce nonsense results if the string
+// are case-insensitive but may produce nonsense results if the sequence
 // contains non-base symbols.
 type DNAStrict []byte
 
@@ -47,21 +47,21 @@ func transcribe(s []byte) []byte {
 
 // Transcribe returns the RNA transcription of the receiver.
 //
-// A new string is returned.  The receiver string is unmodified.
+// A new sequence is returned.  The receiver is unmodified.
 func (s DNA) Transcribe() RNA {
 	return RNA(transcribe(s))
 }
 
 // Transcribe returns the RNA transcription of the receiver.
 //
-// A new string is returned.  The original string is unmodified.
+// A new sequence is returned.  The receiver is unmodified.
 func (s DNAStrict) Transcribe() RNAStrict {
 	return RNAStrict(transcribe(s))
 }
 
 // ReverseComplement returns the reverse complement of the receiver.
 //
-// A new string is returned.  The receiver is left unmodified.
+// A new sequence is returned.  The receiver is unmodified.
 // Symbols not in the DNA alphabet are reversed but otherwise left unchanged.
 func (s DNA) ReverseComplement() DNA {
 	rc := make(DNA, len(s))
@@ -81,7 +81,7 @@ func (s DNA) ReverseComplement() DNA {
 
 // ReverseComplement returns the reverse complement of the receiver.
 //
-// A new string is returned.  The receiver is left unmodified.
+// A new sequence is returned.  The receiver is unmodified.
 func (s DNAStrict) ReverseComplement() DNAStrict {
 	rc := make(DNAStrict, len(s))
 	rcx := len(rc)
@@ -93,7 +93,7 @@ func (s DNAStrict) ReverseComplement() DNAStrict {
 	return rc
 }
 
-// CGFraction returns the fraction of the string that is C or G over the
+// CGFraction returns the fraction of the sequence that is C or G over the
 // string length.
 func (s DNAStrict) CGFraction() float64 {
 	_, c, _, g := baseFreq(s)
