@@ -13,6 +13,9 @@ import (
 // Functions general to multiple sequence types.
 //
 // There is no named type for generalized sequences.  []byte seems enough.
+// Functions here are generally case sensitive and should be documented as
+// such as a reminder that are different than methods on base and amino acid
+// types.
 
 // Freq returns counts of all symbols appearing in a sequence.
 //
@@ -38,6 +41,7 @@ func baseFreq(s []byte) (a, c, tu, g int) {
 }
 
 // Hamming returns the Hamming distance between two byte sequences.
+// Comparison is done byte-wise and so is case sensitive.
 func Hamming(s, t []byte) (int, error) {
 	if len(t) != len(s) {
 		return 0, errors.New("Hamming: unequal lengths")
@@ -54,7 +58,8 @@ func Hamming(s, t []byte) (int, error) {
 // AllIndex finds all occurrences of a motif in a sequence.
 //
 // Returned is a list of indexes of all occurrences of motif m in sequence s,
-// including overlapping ones.
+// including overlapping ones.   Comparison is done byte-wise and so is
+// case sensitive.
 func AllIndex(s, m []byte) (x []int) {
 	for searched := 0; ; {
 		i := bytes.Index(s[searched:], m)

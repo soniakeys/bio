@@ -14,7 +14,8 @@ import (
 // RNA type represents a RNA sequence.
 //
 // It is expected to hold RNA base symbols but other symbols are allowed.
-// Methods on the type accomodate non-base symbols.
+// Methods on the type accomodate non-base symbols and accomodate both
+// upper and lower case base symbols.
 type RNA []byte
 
 // RNAStrict type represents a sequence consisting strictly of RNA symbols.

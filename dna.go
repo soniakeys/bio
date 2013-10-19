@@ -10,7 +10,8 @@ package bio
 // DNA type represents a DNA sequence.
 //
 // It is expected to hold DNA base symbols but other symbols are allowed.
-// Methods on the type accomodate non-base symbols.
+// Methods on the type accomodate non-base symbols and accomodate
+// both upper and lower case base symbols.
 type DNA []byte
 
 // DNAStrict type represents a sequence consisting strictly of DNA symbols.
