@@ -3,6 +3,8 @@
 
 package bio
 
+import "errors"
+
 // seq.go
 //
 // Functions general to multiple sequence types.
@@ -30,4 +32,18 @@ func baseFreq(s []byte) (a, c, tu, g int) {
 		n[b>>1&3]++
 	}
 	return n['A'>>1&3], n['C'>>1&3], n['T'>>1&3], n['G'>>1&3]
+}
+
+// Hamming returns the Hamming distance between two byte sequences.
+func Hamming(s, t []byte) (int, error) {
+	if len(t) != len(s) {
+		return 0, errors.New("Hamming: unequal lengths")
+	}
+	h := 0
+	for i, b := range s {
+		if b != t[i] {
+			h++
+		}
+	}
+	return h, nil
 }
