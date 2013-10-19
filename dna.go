@@ -100,3 +100,96 @@ func (s DNAStrict) CGFraction() float64 {
 	_, c, _, g := baseFreq(s)
 	return float64(c+g) / float64(len(s))
 }
+
+// DNAConsensus returns a consensus sequence from multiple sequences.
+//
+// Consensus in each position is simply the most frequent base in that
+// position.  If, for a given position, a base does not appear in any sequence,
+// a '-' is emitted.  Input sequences should be of the same lengths, but the
+// result will be the length of the first sequence.  Sequences shorter or
+// longer than the first are allowed, any excess length being ignored.  While
+// the function is case insensitive, the result is returned as upper case.
+func DNAConsensus(c []DNA) DNA {
+	if len(c) == 0 {
+		return nil
+	}
+	s := c[0]
+	if len(s) == 0 {
+		return nil
+	}
+	const bases = "ACTG"
+	r := make(DNA, len(s))
+	// profile posistion by position, without constructing profile matrix
+	for i := range r {
+		// profile
+		var n [4]int
+		for _, s := range c {
+			if i < len(s) {
+				// c.f. DNAStrict version
+				switch b := s[i] | 0x20; b {
+				case 'a', 'c', 't', 'g':
+					n[b>>1&3]++
+				}
+
+			}
+		}
+		// find consensus
+		max := n[0]
+		maxb := 0
+		for b := 1; b < 4; b++ {
+			if n[b] > max {
+				max = n[b]
+				maxb = b
+			}
+		}
+		// c.f. DNAStrict version
+		if max > 0 {
+			r[i] = bases[maxb]
+		} else {
+			r[i] = '-'
+		}
+	}
+	return r
+}
+
+// DNAStrictConsensus returns a consensus sequence from multiple sequences.
+//
+// Consensus in each position is simply the most frequent base in that
+// position.  Input sequences should be of the same lengths, but the result
+// will be the length of the first sequence.  Sequences shorter or longer
+// than the first are allowed, any excess length being ignored.  While the
+// function is case insensitive, the result is returned as upper case.
+func DNAStrictConsensus(c []DNAStrict) DNAStrict {
+	if len(c) == 0 {
+		return nil
+	}
+	s := c[0]
+	if len(s) == 0 {
+		return nil
+	}
+	const bases = "ACTG"
+	r := make(DNAStrict, len(s))
+	// profile posistion by position, without constructing profile matrix
+	for i := range r {
+		// profile
+		var n [4]int
+		for _, s := range c {
+			if i < len(s) {
+				// c.f. DNA version
+				n[s[i]>>1&3]++
+			}
+		}
+		// find consensus
+		max := n[0]
+		maxb := 0
+		for b := 1; b < 4; b++ {
+			if n[b] > max {
+				max = n[b]
+				maxb = b
+			}
+		}
+		// c.f. DNA version
+		r[i] = bases[maxb]
+	}
+	return r
+}

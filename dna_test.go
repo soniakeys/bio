@@ -60,3 +60,27 @@ func ExampleDNAStrict_CGFraction() {
 	// Output:
 	// 0.667
 }
+
+func ExampleDNAConsensus() {
+	c := []bio.DNA{
+		bio.DNA("GAT..CA"),
+		bio.DNA("AA##CGG"),
+		bio.DNA("GACrCCA"),
+		bio.DNA("GxxxACA"),
+		bio.DNA("GATmACA")}
+	fmt.Println(bio.DNAConsensus(c))
+	// Output:
+	// GAT-ACA
+}
+
+func ExampleDNAStrictConsensus() {
+	c := []bio.DNAStrict{
+		bio.DNAStrict("GATTCCA"),
+		bio.DNAStrict("AATTCGG"),
+		bio.DNAStrict("GACTACA"),
+		bio.DNAStrict("GATAACA"),
+		bio.DNAStrict("GATTACA")}
+	fmt.Println(bio.DNAStrictConsensus(c))
+	// Output:
+	// GATTACA
+}
