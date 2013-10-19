@@ -14,6 +14,7 @@ TACCA`)
 	s, err := bio.ReadFasta(r)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 	fmt.Println(s[0].Header)
 	fmt.Println(bio.DNA(s[0].Seq))
