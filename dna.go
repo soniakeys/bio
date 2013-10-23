@@ -109,13 +109,17 @@ func (s DNAStrict) CGFraction() float64 {
 // result will be the length of the first sequence.  Sequences shorter or
 // longer than the first are allowed, any excess length being ignored.  While
 // the function is case insensitive, the result is returned as upper case.
-func DNAConsensus(c []DNA) DNA {
+//
+// Score is the sum of occurrences of the consensus base at each position
+// over the sequence.  Maximum possible score is len(c) * len(c[0]), which
+// would happen if all sequences were identical.
+func DNAConsensus(c []DNA) (seq DNA, score int) {
 	if len(c) == 0 {
-		return nil
+		return
 	}
 	s := c[0]
 	if len(s) == 0 {
-		return nil
+		return
 	}
 	const bases = "ACTG"
 	r := make(DNA, len(s))
@@ -145,11 +149,12 @@ func DNAConsensus(c []DNA) DNA {
 		// c.f. DNAStrict version
 		if max > 0 {
 			r[i] = bases[maxb]
+			score += max
 		} else {
 			r[i] = '-'
 		}
 	}
-	return r
+	return r, score
 }
 
 // DNAStrictConsensus returns a consensus sequence from multiple sequences.
@@ -159,13 +164,17 @@ func DNAConsensus(c []DNA) DNA {
 // will be the length of the first sequence.  Sequences shorter or longer
 // than the first are allowed, any excess length being ignored.  While the
 // function is case insensitive, the result is returned as upper case.
-func DNAStrictConsensus(c []DNAStrict) DNAStrict {
+//
+// Score is the sum of occurrences of the consensus base at each position
+// over the sequence.  Maximum possible score is len(c) * len(c[0]), which
+// would happen if all sequences were identical.
+func DNAStrictConsensus(c []DNAStrict) (seq DNAStrict, score int) {
 	if len(c) == 0 {
-		return nil
+		return
 	}
 	s := c[0]
 	if len(s) == 0 {
-		return nil
+		return
 	}
 	const bases = "ACTG"
 	r := make(DNAStrict, len(s))
@@ -190,6 +199,7 @@ func DNAStrictConsensus(c []DNAStrict) DNAStrict {
 		}
 		// c.f. DNA version
 		r[i] = bases[maxb]
+		score += max
 	}
-	return r
+	return r, score
 }

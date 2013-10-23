@@ -70,7 +70,7 @@ func ExampleDNAConsensus() {
 		bio.DNA("GATmACA")}
 	fmt.Println(bio.DNAConsensus(c))
 	// Output:
-	// GAT-ACA
+	// GAT-ACA 20
 }
 
 func ExampleDNAStrictConsensus() {
@@ -82,5 +82,5 @@ func ExampleDNAStrictConsensus() {
 		bio.DNAStrict("GATTACA")}
 	fmt.Println(bio.DNAStrictConsensus(c))
 	// Output:
-	// GATTACA
+	// GATTACA 28
 }
