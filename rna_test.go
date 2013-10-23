@@ -19,16 +19,3 @@ func ExampleRNAStrict_BaseFreq() {
 	// u 1
 	// g 1
 }
-
-func ExampleRNAStrict_Translate() {
-	s := bio.RNAStrict("AugGcgAacAauUacUga")
-	a, err := s.Translate()
-	fmt.Printf("%T\n", a)
-	fmt.Println(a)
-	if err != nil {
-		fmt.Println(err)
-	}
-	// Output:
-	// bio.AAStrict
-	// MANNY
-}
