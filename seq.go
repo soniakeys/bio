@@ -31,8 +31,8 @@ func Freq(s []byte) map[byte]int {
 	return m
 }
 
-// function common to both DNAStrict and RNAStrict.
-func baseFreq(s []byte) (a, c, tu, g int) {
+// function common to both DNA8 and RNA8.
+func baseFreq8(s []byte) (a, c, tu, g int) {
 	var n [4]int
 	for _, b := range s {
 		n[b>>1&3]++

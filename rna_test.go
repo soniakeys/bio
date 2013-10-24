@@ -6,8 +6,8 @@ import (
 	"github.com/soniakeys/bio"
 )
 
-func ExampleRNAStrict_BaseFreq() {
-	s := bio.RNAStrict("Agua")
+func ExampleRNA8_BaseFreq() {
+	s := bio.RNA8("Agua")
 	a, c, u, g := s.BaseFreq()
 	fmt.Println("a", a)
 	fmt.Println("c", c)

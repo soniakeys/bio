@@ -7,8 +7,8 @@ import (
 	"github.com/soniakeys/bio"
 )
 
-func ExampleRNAStrict_Translate() {
-	s := bio.RNAStrict("AugGcgAacAauUacUga")
+func ExampleRNA8_Translate() {
+	s := bio.RNA8("AugGcgAacAauUacUga")
 	a, err := s.Translate()
 	fmt.Printf("%T\n", a)
 	fmt.Println(a)
@@ -16,12 +16,12 @@ func ExampleRNAStrict_Translate() {
 		fmt.Println(err)
 	}
 	// Output:
-	// bio.AAStrict
+	// bio.AA20
 	// MANNY
 }
 
-func ExampleDNAStrict_TranslateORF() {
-	s := bio.DNAStrict("ctATGatcttctCATactacacATGtaCATaacccc")
+func ExampleDNA8_TranslateORF() {
+	s := bio.DNA8("ctATGatcttctCATactacacATGtaCATaacccc")
 	a := s.TranslateORF()
 	// Sort result strings just so output order is repeatable.
 	t := make([]string, len(a))

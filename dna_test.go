@@ -6,8 +6,8 @@ import (
 	"github.com/soniakeys/bio"
 )
 
-func ExampleDNAStrict_BaseFreq() {
-	s := bio.DNAStrict("Gattaca")
+func ExampleDNA8_BaseFreq() {
+	s := bio.DNA8("Gattaca")
 	a, c, t, g := s.BaseFreq()
 	fmt.Println("a", a)
 	fmt.Println("c", c)
@@ -30,14 +30,14 @@ func ExampleDNA_Transcribe() {
 	// bio.RNA Urisuan
 }
 
-func ExampleDNAStrict_Transcribe() {
-	d := bio.DNAStrict("Tact")
+func ExampleDNA8_Transcribe() {
+	d := bio.DNA8("Tact")
 	r := d.Transcribe()
 	fmt.Printf("%T %v\n", d, d)
 	fmt.Printf("%T %v\n", r, r)
 	// Output:
-	// bio.DNAStrict Tact
-	// bio.RNAStrict Uacu
+	// bio.DNA8 Tact
+	// bio.RNA8 Uacu
 }
 
 func ExampleDNA_ReverseComplement() {
@@ -47,15 +47,15 @@ func ExampleDNA_ReverseComplement() {
 	// tmtgtaT
 }
 
-func ExampleDNAStrict_ReverseComplement() {
-	s := bio.DNAStrict("Atacaga")
+func ExampleDNA8_ReverseComplement() {
+	s := bio.DNA8("Atacaga")
 	fmt.Println(s.ReverseComplement())
 	// Output:
 	// tctgtaT
 }
 
-func ExampleDNAStrict_CGFraction() {
-	s := bio.DNAStrict("cagggt")
+func ExampleDNA8_CGFraction() {
+	s := bio.DNA8("cagggt")
 	fmt.Printf("%.3f\n", s.CGFraction())
 	// Output:
 	// 0.667
@@ -73,14 +73,14 @@ func ExampleDNAConsensus() {
 	// GAT-ACA 20
 }
 
-func ExampleDNAStrictConsensus() {
-	c := []bio.DNAStrict{
-		bio.DNAStrict("GATTCCA"),
-		bio.DNAStrict("AATTCGG"),
-		bio.DNAStrict("GACTACA"),
-		bio.DNAStrict("GATAACA"),
-		bio.DNAStrict("GATTACA")}
-	fmt.Println(bio.DNAStrictConsensus(c))
+func ExampleDNA8Consensus() {
+	c := []bio.DNA8{
+		bio.DNA8("GATTCCA"),
+		bio.DNA8("AATTCGG"),
+		bio.DNA8("GACTACA"),
+		bio.DNA8("GATAACA"),
+		bio.DNA8("GATTACA")}
+	fmt.Println(bio.DNAConsensus8(c))
 	// Output:
 	// GATTACA 28
 }

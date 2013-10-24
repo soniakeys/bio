@@ -18,12 +18,12 @@ import (
 // upper and lower case base symbols.
 type RNA []byte
 
-// RNAStrict type represents a sequence consisting strictly of RNA symbols.
+// RNA8 type represents a sequence of upper or lower case RNA symbols.
 //
-// Allowed symbols are ACUGacug.  Methods on the type assume this.  Methods
-// are case-insensitive but may produce nonsense results if the sequence
-// contains non-base symbols.
-type RNAStrict []byte
+// Allowed symbols are the eight symbols ACUGacug.  Methods on the type
+// assume this.  Methods are thus case-insensitive but may produce nonsense
+// results if the sequence contains non-base symbols.
+type RNA8 []byte
 
 // String satisfies fmt.Stringer.
 func (s RNA) String() string {
@@ -31,11 +31,11 @@ func (s RNA) String() string {
 }
 
 // String satisfies fmt.Stringer.
-func (s RNAStrict) String() string {
+func (s RNA8) String() string {
 	return string(s)
 }
 
 // BaseFreq returns counts of each of the four RNA bases.
-func (s RNAStrict) BaseFreq() (a, c, u, g int) {
-	return baseFreq(s)
+func (s RNA8) BaseFreq() (a, c, u, g int) {
+	return baseFreq8(s)
 }

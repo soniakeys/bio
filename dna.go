@@ -14,12 +14,12 @@ package bio
 // both upper and lower case base symbols.
 type DNA []byte
 
-// DNAStrict type represents a sequence consisting strictly of DNA symbols.
+// DNA8 type represents a sequence of upper or lower case DNA symbols.
 //
-// Allowed symbols are ACTGactg.  Methods on the type assume this.  Methods
-// are case-insensitive but may produce nonsense results if the sequence
-// contains non-base symbols.
-type DNAStrict []byte
+// Allowed symbols are the eight symbols ACTGactg.  Methods on the type
+// assume this.  Methods are thus case-insensitive but may produce nonsense
+// results if the sequence contains non-base symbols.
+type DNA8 []byte
 
 // String satisfies fmt.Stringer.
 func (s DNA) String() string {
@@ -27,13 +27,13 @@ func (s DNA) String() string {
 }
 
 // String satisfies fmt.Stringer.
-func (s DNAStrict) String() string {
+func (s DNA8) String() string {
 	return string(s)
 }
 
 // BaseFreq returns counts of each of the four DNA bases.
-func (s DNAStrict) BaseFreq() (a, c, t, g int) {
-	return baseFreq(s)
+func (s DNA8) BaseFreq() (a, c, t, g int) {
+	return baseFreq8(s)
 }
 
 func transcribe(s []byte) []byte {
@@ -56,8 +56,8 @@ func (s DNA) Transcribe() RNA {
 // Transcribe returns the RNA transcription of the receiver.
 //
 // A new sequence is returned.  The receiver is unmodified.
-func (s DNAStrict) Transcribe() RNAStrict {
-	return RNAStrict(transcribe(s))
+func (s DNA8) Transcribe() RNA8 {
+	return RNA8(transcribe(s))
 }
 
 // ReverseComplement returns the reverse complement of the receiver.
@@ -83,8 +83,8 @@ func (s DNA) ReverseComplement() DNA {
 // ReverseComplement returns the reverse complement of the receiver.
 //
 // A new sequence is returned.  The receiver is unmodified.
-func (s DNAStrict) ReverseComplement() DNAStrict {
-	rc := make(DNAStrict, len(s))
+func (s DNA8) ReverseComplement() DNA8 {
+	rc := make(DNA8, len(s))
 	rcx := len(rc)
 	for _, b := range s {
 		rcx--
@@ -96,8 +96,8 @@ func (s DNAStrict) ReverseComplement() DNAStrict {
 
 // CGFraction returns the fraction of the sequence that is C or G over the
 // string length.
-func (s DNAStrict) CGFraction() float64 {
-	_, c, _, g := baseFreq(s)
+func (s DNA8) CGFraction() float64 {
+	_, c, _, g := baseFreq8(s)
 	return float64(c+g) / float64(len(s))
 }
 
@@ -129,7 +129,7 @@ func DNAConsensus(c []DNA) (seq DNA, score int) {
 		var n [4]int
 		for _, s := range c {
 			if i < len(s) {
-				// c.f. DNAStrict version
+				// c.f. DNA8 version
 				switch b := s[i] | 0x20; b {
 				case 'a', 'c', 't', 'g':
 					n[b>>1&3]++
@@ -146,7 +146,7 @@ func DNAConsensus(c []DNA) (seq DNA, score int) {
 				maxb = b
 			}
 		}
-		// c.f. DNAStrict version
+		// c.f. DNA8 version
 		if max > 0 {
 			r[i] = bases[maxb]
 			score += max
@@ -157,7 +157,7 @@ func DNAConsensus(c []DNA) (seq DNA, score int) {
 	return r, score
 }
 
-// DNAStrictConsensus returns a consensus sequence from multiple sequences.
+// DNAConsensus8 returns a consensus sequence from multiple sequences.
 //
 // Consensus in each position is simply the most frequent base in that
 // position.  Input sequences should be of the same lengths, but the result
@@ -168,7 +168,7 @@ func DNAConsensus(c []DNA) (seq DNA, score int) {
 // Score is the sum of occurrences of the consensus base at each position
 // over the sequence.  Maximum possible score is len(c) * len(c[0]), which
 // would happen if all sequences were identical.
-func DNAStrictConsensus(c []DNAStrict) (seq DNAStrict, score int) {
+func DNAConsensus8(c []DNA8) (seq DNA8, score int) {
 	if len(c) == 0 {
 		return
 	}
@@ -177,7 +177,7 @@ func DNAStrictConsensus(c []DNAStrict) (seq DNAStrict, score int) {
 		return
 	}
 	const bases = "ACTG"
-	r := make(DNAStrict, len(s))
+	r := make(DNA8, len(s))
 	// profile posistion by position, without constructing profile matrix
 	for i := range r {
 		// profile

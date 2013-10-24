@@ -19,12 +19,12 @@ const (
 	codons = "KNNKTTTTIIIMRSSRQHHQPPPPLLLLRRRR*YY*SSSSLFFL*CCWEDDEAAAAVVVVGGGG"
 )
 
-func codonIndex(b0, b1, b2 byte) int {
+func codonIndex8(b0, b1, b2 byte) int {
 	return int(b0&6<<3 | b1&6<<1 | b2&6>>1)
 }
 
-func translateCodon(b0, b1, b2 byte) byte {
-	return codons[codonIndex(b0, b1, b2)]
+func translateCodon8(b0, b1, b2 byte) byte {
+	return codons[codonIndex8(b0, b1, b2)]
 }
 
 // RNAStart is the RNA start codon, AUG
@@ -59,20 +59,20 @@ var dnaStartRx = regexp.MustCompile("[Aa][Tt][Gg]")
 //
 // Errors are returned for no start codon and no stop codon but the
 // translated sequence is returned in any case.
-func (s RNAStrict) Translate() (a AAStrict, err error) {
+func (s RNA8) Translate() (a AA20, err error) {
 	if len(s) < 3 || !IsRNAStart(s[0], s[1], s[2]) {
 		err = errors.New("No start codon")
 	}
-	return translateStrict(s)
+	return translate8(s)
 }
 
-func translateStrict(s []byte) (a AAStrict, err error) {
+func translate8(s []byte) (a AA20, err error) {
 	for p := 0; ; p += 3 {
 		if p+3 > len(s) {
 			err = errors.New("No stop codon")
 			return
 		}
-		aa := translateCodon(s[p], s[p+1], s[p+2])
+		aa := translateCodon8(s[p], s[p+1], s[p+2])
 		if aa == aaStop {
 			return
 		}
@@ -83,16 +83,16 @@ func translateStrict(s []byte) (a AAStrict, err error) {
 // TranslateORF locates and translates all open reading frames in a sequence.
 //
 // Returned is a collection of all unique amino acid sequences.
-func (s DNAStrict) TranslateORF() (c []AAStrict) {
-	m := map[string]AAStrict{}
-	orf := func(s DNAStrict) {
+func (s DNA8) TranslateORF() (c []AA20) {
+	m := map[string]AA20{}
+	orf := func(s DNA8) {
 		for {
 			start := dnaStartRx.FindIndex(s)
 			if start == nil {
 				return
 			}
 			s = s[start[0]:]
-			ps, err := translateStrict(s)
+			ps, err := translate8(s)
 			if err == nil {
 				m[string(ps)] = ps
 			}
