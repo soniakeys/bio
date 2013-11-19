@@ -11,7 +11,9 @@ package bio
 //
 // It is expected to hold DNA base symbols but other symbols are allowed.
 // Methods on the type accomodate non-base symbols and accomodate
-// both upper and lower case base symbols.
+// both upper and lower case base symbols.  Methods on the type may ignore
+// or process non-base symbols.  If they process them in some way, the
+// set
 type DNA []byte
 
 // DNA8 type represents a sequence of upper or lower case DNA symbols.
