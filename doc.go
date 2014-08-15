@@ -11,8 +11,8 @@
 // Byte slices, as []byte with no named type are used as the most general
 // sequnce type and a number of functions will operate on this type.  These
 // functions will generally implement some string algorithm that is not
-// specific to DNA or peptides.  These functions will generally perform case
-// sensitive symbol comparisons.
+// specific to DNA or peptides.  These functions will generally treat []byte
+// as a sequence of symbols and perform case sensitive symbol comparisons.
 //
 // A number of types are defined as named types for byte slices and are
 // intended to hold data restricted to some symbol set.  These are named
