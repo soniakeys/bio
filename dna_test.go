@@ -54,20 +54,21 @@ func ExampleDNA8_ReverseComplement() {
 	// tctgtaT
 }
 
-func ExampleDNA8_CGFraction() {
+func ExampleDNA8_GCContent() {
 	s := bio.DNA8("cagggt")
-	fmt.Printf("%.3f\n", s.CGFraction())
+	fmt.Printf("%.3f\n", s.GCContent())
 	// Output:
 	// 0.667
 }
 
 func ExampleDNAConsensus() {
 	c := []bio.DNA{
-		bio.DNA("GAT..CA"),
-		bio.DNA("AA##CGG"),
-		bio.DNA("GACrCCA"),
-		bio.DNA("GxxxACA"),
-		bio.DNA("GATmACA")}
+		bio.DNA("GAT..ca"),
+		bio.DNA("AA##cgg"),
+		bio.DNA("GACrcca"),
+		bio.DNA("Gxxxaca"),
+		bio.DNA("GATmaca"),
+	}
 	fmt.Println(bio.DNAConsensus(c))
 	// Output:
 	// GAT-ACA 20
@@ -75,12 +76,13 @@ func ExampleDNAConsensus() {
 
 func ExampleDNA8Consensus() {
 	c := []bio.DNA8{
-		bio.DNA8("GATTCCA"),
-		bio.DNA8("AATTCGG"),
-		bio.DNA8("GACTACA"),
-		bio.DNA8("GATAACA"),
-		bio.DNA8("GATTACA")}
-	fmt.Println(bio.DNAConsensus8(c))
+		bio.DNA8("GATTcca"),
+		bio.DNA8("AATTcgg"),
+		bio.DNA8("GACTaca"),
+		bio.DNA8("GATAaca"),
+		bio.DNA8("GATTaca"),
+	}
+	fmt.Println(bio.DNA8Consensus(c))
 	// Output:
 	// GATTACA 28
 }

@@ -14,8 +14,10 @@ import (
 //
 // There is no named type for generalized sequences.  []byte seems enough.
 // Functions here are generally case sensitive and should be documented as
-// such as a reminder that are different than methods on base and amino acid
-// types.
+// such, to avoid confusion with the behavior of case insensitive types
+// such as DNA8.
+
+const LCBit = 0x20 // Bit mask for ASCII alphabetic values
 
 // Freq returns counts of all symbols appearing in a sequence.
 //
@@ -31,13 +33,13 @@ func Freq(s []byte) map[byte]int {
 	return m
 }
 
-// function common to both DNA8 and RNA8.
+// case insensitive.  used by methods of both DNA8 and RNA8.
 func baseFreq8(s []byte) (a, c, tu, g int) {
-	var n [4]int
+	var n [8]int
 	for _, b := range s {
-		n[b>>1&3]++
+		n[b&6]++
 	}
-	return n['A'>>1&3], n['C'>>1&3], n['T'>>1&3], n['G'>>1&3]
+	return n['A'&6], n['C'&6], n['T'&6], n['G'&6]
 }
 
 // Hamming returns the Hamming distance between two byte sequences.
@@ -72,34 +74,28 @@ func AllIndex(s, m []byte) (x []int) {
 	return
 }
 
-// ToLower returns a new sequence with upper case symbols forced to lower case.
+// ToLower returns a new sequence with ASCII upper case forced to lower case.
 //
-// This is the wrong way to convert case in natural languge text that could
-// include non-ASCII letters, but it is the right way to convert sequences of
-// byte-length symbols, like base sequences for example.  Use this function
-// as needed to prepare sequences for case sensitive functions.
+// Non-alphabetic bytes are unaffected.
 func ToLower(s []byte) []byte {
 	r := make([]byte, len(s))
 	for i, b := range s {
 		if b >= 'A' && b <= 'Z' {
-			b += 32
+			b |= LCBit
 		}
 		r[i] = b
 	}
 	return r
 }
 
-// ToUpper returns a new sequence with lower case symbols forced to upper case.
+// ToUpper returns a new sequence with ASCII lower case forced to upper case.
 //
-// This is the wrong way to convert case in natural languge text that could
-// include non-ASCII letters, but it is the right way to convert sequences of
-// byte-length symbols, like base sequences for example.  Use this function
-// as needed to prepare sequences for case sensitive functions.
+// Non-alphabetic bytes are unaffected.
 func ToUpper(s []byte) []byte {
 	r := make([]byte, len(s))
 	for i, b := range s {
 		if b >= 'a' && b <= 'z' {
-			b -= 32
+			b &^= LCBit
 		}
 		r[i] = b
 	}

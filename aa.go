@@ -17,10 +17,12 @@ type AA20 []byte
 // AA20Alphabet is the set of 20 proteinogenic amino acid symbols.
 const AA20Alphabet = "ACDEFGHIKLMNPQRSTVWY"
 
+// String returns an AA converted to a string.
 func (s AA) String() string {
 	return string(s)
 }
 
+// String returns an AA20 converted to a string.
 func (s AA20) String() string {
 	return string(s)
 }

@@ -27,26 +27,31 @@ func translateCodon8(b0, b1, b2 byte) byte {
 	return codons[codonIndex8(b0, b1, b2)]
 }
 
-// RNAStart is the RNA start codon, AUG
-const RNAStart = "AUG"
+const (
+	DNAStart = "ATG" // DNA start codon
+	RNAStart = "AUG" // RNA start codon
+)
 
-// DNAStart is the DNA start codon, ATG
-const DNAStart = "ATG"
-
-// IsRNAStart is an effecient case insensitve test for the RNA start codon.
+// IsRNAStart tests for the RNA start codon.
+//
+// The arguments represent a sequence of RNA bases.
+// Comparison is case insensitive.
 func IsRNAStart(b0, b1, b2 byte) bool {
 	// force bytes to upper case
-	return b0&0xdf == RNAStart[0] &&
-		b1&0xdf == RNAStart[1] &&
-		b2&0xdf == RNAStart[2]
+	return b0&^LCBit == RNAStart[0] &&
+		b1&^LCBit == RNAStart[1] &&
+		b2&^LCBit == RNAStart[2]
 }
 
-// IsDNAStart is an effecient case insensitve test for the DNA start codon.
+// IsDNAStart tests for the DNA start codon.
+//
+// The arguments represent a sequence of DNA bases.
+// Comparison is case insensitive.
 func IsDNAStart(b0, b1, b2 byte) bool {
 	// force bytes to upper case
-	return b0&0xdf == DNAStart[0] &&
-		b1&0xdf == DNAStart[1] &&
-		b2&0xdf == DNAStart[2]
+	return b0&^LCBit == DNAStart[0] &&
+		b1&^LCBit == DNAStart[1] &&
+		b2&^LCBit == DNAStart[2]
 }
 
 var dnaStartRx = regexp.MustCompile("[Aa][Tt][Gg]")
@@ -83,7 +88,9 @@ func translate8(s []byte) (a AA20, err error) {
 // TranslateORF locates and translates all open reading frames in a sequence.
 //
 // Returned is a collection of all unique amino acid sequences.
-func (s DNA8) TranslateORF() (c []AA20) {
+func (s DNA8) TranslateORF() []AA20 {
+	// TODO binary insertion with sort.Search would be more efficient than
+	// a map here.
 	m := map[string]AA20{}
 	orf := func(s DNA8) {
 		for {
@@ -101,8 +108,11 @@ func (s DNA8) TranslateORF() (c []AA20) {
 	}
 	orf(s)
 	orf(s.ReverseComplement())
+	c := make([]AA20, len(m))
+	i := 0
 	for _, s := range m {
-		c = append(c, s)
+		c[i] = s
+		i++
 	}
-	return
+	return c
 }

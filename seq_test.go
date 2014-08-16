@@ -44,15 +44,15 @@ func ExampleAllIndex() {
 }
 
 func ExampleToUpper() {
-	t := bio.DNA("AGgCT-AC")
+	t := bio.DNA("AGgCT-AC?")
 	fmt.Println(bio.DNA(bio.ToUpper(t)))
 	// Output:
-	// AGGCT-AC
+	// AGGCT-AC?
 }
 
 func ExampleToLower() {
-	t := bio.DNA("AGgCT-AC")
+	t := bio.DNA("AGgCT-AC?")
 	fmt.Println(bio.DNA(bio.ToLower(t)))
 	// Output:
-	// aggct-ac
+	// aggct-ac?
 }
