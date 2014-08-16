@@ -15,6 +15,17 @@ import (
 //
 // Amino acid definitions
 
+// AA type holds amino acid sequences.
+//
+// Symbols are not restricted to AA20Alphabet, data may include other
+// symbols such a gap symbols.
+type AA []byte
+
+// String returns an AA converted to a string.
+func (s AA) String() string {
+	return string(s)
+}
+
 // AA20 type holds amino acid sequences.  Content should be strictly limited
 // to the symbols of AA20Alphabet, in upper case.  Methods may panic
 // on other symbols.
