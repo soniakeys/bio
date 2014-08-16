@@ -25,7 +25,7 @@ type RNA []byte
 // results if the sequence contains non-base symbols.
 type RNA8 []byte
 
-// String satisfies fmt.Stringer.
+// String converts the receiver to a string.
 func (s RNA) String() string {
 	return string(s)
 }

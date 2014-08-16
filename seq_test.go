@@ -25,12 +25,7 @@ func ExampleFreq() {
 func ExampleHamming() {
 	s := bio.DNA("AGGCTTAC")
 	t := bio.DNA("AGgCTAAC")
-	h, err := bio.Hamming(s, t)
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
-	fmt.Println(h)
+	fmt.Println(bio.Hamming(s, t))
 	// Output:
 	// 2
 }

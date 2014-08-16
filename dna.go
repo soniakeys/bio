@@ -3,6 +3,13 @@
 
 package bio
 
+import (
+	"bytes"
+	"math"
+	"math/rand"
+	"sort"
+)
+
 // dna.go
 //
 // Types and methods that are specific to DNA or optimized for DNA.
@@ -91,8 +98,6 @@ func (s DNA8) ReverseComplement() DNA8 {
 	for _, b := range s {
 		rcx--
 		rc[rcx] = ^b&2>>1*17 | 4 ^ b
-		// crazy bit twiddling, but it was faster,
-		// at least on the machine it was written on.
 	}
 	return rc
 }
@@ -132,7 +137,7 @@ func DNAConsensus(c []DNA) (seq DNA, score int) {
 		var n [7]int
 		for _, s := range c {
 			if i < len(s) {
-				// c.f. DNA8 version
+				// (see DNA8 version)
 				switch b := s[i] | LCBit; b {
 				case 'a', 'c', 't', 'g':
 					n[b&6]++
@@ -149,7 +154,7 @@ func DNAConsensus(c []DNA) (seq DNA, score int) {
 				maxb = b
 			}
 		}
-		// c.f. DNA8 version
+		// (see DNA8 version)
 		if max > 0 {
 			r[i] = bases[maxb]
 			score += max
@@ -187,7 +192,7 @@ func DNA8Consensus(c []DNA8) (seq DNA8, score int) {
 		var n [7]int
 		for _, s := range c {
 			if i < len(s) {
-				// c.f. DNA version
+				// (see DNA version)
 				n[s[i]&6]++
 			}
 		}
@@ -200,9 +205,486 @@ func DNA8Consensus(c []DNA8) (seq DNA8, score int) {
 				maxb = b
 			}
 		}
-		// c.f. DNA version
+		// (see DNA version)
 		r[i] = bases[maxb]
 		score += max
 	}
 	return r, score
+}
+
+// GCSkew senses G and C in a DNA8 symbol.
+//
+// Result:
+//   1 for 'G' or 'g'
+//   -1 for 'C' or 'c'
+//   0 for 'A', 'a', 'T' or 't'
+//   Nonsense for other symbols
+func GCSkew(b byte) int {
+	b >>= 1
+	return int(int8(-(b & 1) & (b&2 - 1)))
+}
+
+// MinGCSkew returns the positions in s with the minimum cumulative GC skew
+// from the beginning of the string.
+func (s DNA8) MinSkew() (m []int) {
+	min := 0
+	skew := 0
+	for i, b := range s {
+		skew += GCSkew(b)
+		switch {
+		case skew < min:
+			m = []int{i + 1}
+			min = skew
+		case skew == min:
+			m = append(m, i+1)
+		}
+	}
+	return
+}
+
+// HammingVariants returns a list of all DNA k-mers within hamming distance h
+// of receiver kmer k.  Case is preserved by position.
+func (k DNA8) HammingVariants(h int) []string {
+	v := []string{string(k)}
+	const sym = "A C T G"
+	var f func(DNA8, int)
+	f = func(t DNA8, h int) {
+		for i := 0; i < len(t); i++ {
+			sub := t[i:]
+			b := sub[0]
+			vb := byte(0)
+			for j := 0; j < 3; j++ {
+				if vb == b&6 {
+					vb += 2
+				}
+				sub[0] = sym[vb] | b&32
+				v = append(v, string(k))
+				if h > 1 && len(sub) > 1 {
+					f(sub[1:], h-1)
+				}
+				vb += 2
+			}
+			sub[0] = b
+		}
+	}
+	f(k, h)
+	return v
+}
+
+// ModalVariantKmer returns the most frequent DNA k-mers within hamming
+// distance h of any k-mer present in receiver string s.
+func (s DNA8) ModalVariantKmer(k, h int) (m []string) {
+	c := map[string][]string{}
+	f := map[string]int{}
+	max := 0
+	for i, j := 0, k; j <= len(s); i, j = i+1, j+1 {
+		k0 := s[i:j]
+		s0 := string(k0)
+		v, ok := c[s0]
+		if !ok {
+			v = k0.HammingVariants(h)
+			c[s0] = v
+		}
+		for _, kmer := range v {
+			n := f[kmer] + 1
+			f[kmer] = n
+			switch {
+			case n > max:
+				m = []string{kmer}
+				max = n
+			case n == max:
+				m = append(m, kmer)
+			}
+		}
+	}
+	return
+}
+
+// ModalVariantKmer returns the most frequent DNA k-mers within hamming
+// distance h of any k-mer present in either receiver string s or the
+// reverse complement of s
+func (s DNA8) ModalVariantKmerRC(k, h int) (m []string) {
+	c := map[string][]string{}
+	f := map[string]int{}
+	max := 0
+	// TODO pull this out and share with ModalVariantKmer
+	tally := func(k0 DNA8) {
+		s0 := string(k0)
+		v, ok := c[s0]
+		if !ok {
+			v = k0.HammingVariants(h)
+			c[s0] = v
+		}
+		for _, kmer := range v {
+			n := f[kmer] + 1
+			f[kmer] = n
+			switch {
+			case n > max:
+				m = []string{kmer}
+				max = n
+			case n == max:
+				m = append(m, kmer)
+			}
+		}
+	}
+	r := s.ReverseComplement()
+	for i, j := 0, k; j <= len(s); i, j = i+1, j+1 {
+		tally(s[i:j])
+		tally(r[i:j])
+	}
+	return
+}
+
+// Find indexes in s where s translates to pep.  Searches all three
+// reading frames and finds overlaps but does not search reverse complement.
+func (s DNA8) AAFindAllIndex(pep AA20) (r []int) {
+	t := make(AA20, len(s)/3)
+	for f := 0; f < 3; f++ {
+		t = t[:(len(s)-f)/3]
+		for i, j := f, 0; j < len(t); i, j = i+3, j+1 {
+			t[j] = translateCodon8(s[i], s[i+1], s[i+2])
+		}
+		x := AllIndex(pep, t)
+		for i, p := range x {
+			x[i] = p*3 + f
+		}
+		r = append(r, x...)
+	}
+	return
+}
+
+// Find indexes in s where s or reverse complement of s translates to pep.
+// Searches all six reading frames, finds overlaps.  Returns 0-based indexes
+// from the start of s.
+func (s DNA8) AAFindAllIndexRC(pep AA20) []int {
+	f := s.AAFindAllIndex(pep)
+	r := s.ReverseComplement().AAFindAllIndex(pep)
+	for i, p := range r {
+		r[i] = len(s) - p - len(pep)*3
+	}
+	return append(f, r...)
+}
+
+// MotifMatrix is a list of kmers all with the same length.
+//
+// Methods may return nonsense results or panic if kmers are not of the same
+// length.
+type MotifMatrix []DNA8
+
+// Score returns the number of unconserved bases in matrix x.  A base is
+// conserved when it is the modal base in a position.  If multimodal, only
+// a single base is considered conserved.
+func (x MotifMatrix) Score() (s int) {
+	k := len(x[0])
+	for i := 0; i < k; i++ {
+		var f [4]int
+		max := 0
+		for _, m := range x {
+			b := m[i] >> 1 & 3
+			f[b]++
+			if f[b] > max {
+				max = f[b]
+			}
+		}
+		s += len(x) - max
+	}
+	return
+}
+
+// Count returns a 4xk matrix of the counts of each base.
+// The row order is ACTG.
+func (x MotifMatrix) Count() (actg [4][]int) {
+	k := len(x[0])
+	f := [4][]int{
+		make([]int, k),
+		make([]int, k),
+		make([]int, k),
+		make([]int, k)}
+	for _, m := range x {
+		for i, b := range m {
+			f[b>>1&3][i]++
+		}
+	}
+	return f
+}
+
+// Profile represents a profile matrix corresponding to a MotifMatrix.
+// Elements are probabilities and sum to 1 in each column.
+// Row order is ACTG.
+type Profile [4][]float64
+
+// NewProfile allocates a profile matrix, leaving it all zeros.
+func NewProfile(k int) Profile {
+	return Profile{
+		make([]float64, k),
+		make([]float64, k),
+		make([]float64, k),
+		make([]float64, k)}
+}
+
+// NewPseudoProfile allocates a profile matrix, initializing it with
+// pseudocount probabilty p.
+func NewPseudoProfile(k int, p float64) Profile {
+	a := make([]float64, k*4)
+	for i := range a {
+		a[i] = p
+	}
+	return Profile{
+		a[:k],
+		a[k : k*2],
+		a[k*2 : k*3],
+		a[k*3:]}
+}
+
+// KmerProb computes the probability of a kmer given profile p.
+func (p Profile) KmerProb(kmer DNA8) float64 {
+	pr := 1.
+	for i, b := range kmer {
+		pr *= p[b>>1&3][i]
+	}
+	return pr
+}
+
+// Kmer returns the profile-most probable kmers in s.
+func (p Profile) Kmer(s DNA8) (k []DNA8) {
+	max := 0.
+	for i, j := 0, len(p[0]); j < len(s); i, j = i+1, j+1 {
+		switch pr := p.KmerProb(s[i:j]); {
+		case pr > max:
+			k = []DNA8{s[i:j]}
+			max = pr
+		case pr == max:
+			k = append(k, s[i:j])
+		}
+	}
+	return
+}
+
+func (p Profile) RandKmer(s DNA8) DNA8 {
+	k := len(p[0])
+	c := make([]float64, len(s)-k+1)
+	c[0] = p.KmerProb(s[:k])
+	for i, j := 1, k+1; j < len(s); i, j = i+1, j+1 {
+		c[i] = c[i-1] + p.KmerProb(s[i:j])
+	}
+	i := sort.SearchFloat64s(c, c[len(c)-1]*rand.Float64())
+	return s[i : i+k]
+}
+
+func GibbsSampler(l []DNA8, k, N int) (MotifMatrix, int) {
+	motifs := make(MotifMatrix, len(l))
+	for i, s := range l {
+		j := rand.Intn(len(s) - k + 1)
+		motifs[i] = s[j : j+k]
+	}
+	best := len(l) * k
+	bestMotifs := make(MotifMatrix, len(l))
+	for i := 0; i < N; i++ {
+		j := rand.Intn(len(l))
+		motifs[j] = motifs[0]
+		motifs[0], motifs[j] = motifs[j], motifs[1:].Profile().RandKmer(l[j])
+		if s := motifs.Score(); s < best {
+			best = s
+			copy(bestMotifs, motifs)
+		}
+	}
+	return bestMotifs, best
+}
+
+func (p Profile) Motifs(l []DNA8) MotifMatrix {
+	m := make(MotifMatrix, len(l))
+	for i, s := range l {
+		m[i] = p.Kmer(s)[0]
+	}
+	return m
+}
+
+func RandomMotifSearch(l []DNA8, k int) (MotifMatrix, int) {
+	motifs := make(MotifMatrix, len(l))
+	for i, s := range l {
+		j := rand.Intn(len(s) - k + 1)
+		motifs[i] = s[j : j+k]
+	}
+	bestMotifs := make(MotifMatrix, len(l))
+	best := len(l) * k
+	for {
+		motifs = motifs.LaplaceProfile().Motifs(l)
+		if s := motifs.Score(); s < best {
+			copy(bestMotifs, motifs)
+			best = s
+		} else {
+			return bestMotifs, s
+		}
+	}
+}
+
+// Profile constructs the profile matrix corresponding to motif matrix m.
+func (x MotifMatrix) Profile() Profile {
+	p := NewProfile(len(x[0]))
+	inc := 1 / float64(len(x))
+	for _, m := range x {
+		for i, b := range m {
+			p[b>>1&3][i] += inc
+		}
+	}
+	return p
+}
+
+// LaplaceProfile constructs the profile matrix corresponding to
+// motif matrix m, augmented by Laplace's Rule of Succession.  That is,
+// with a pseudocount of 1 added to each base count.
+func (x MotifMatrix) LaplaceProfile() Profile {
+	inc := 1 / float64(len(x)+4)
+	p := NewPseudoProfile(len(x[0]), inc)
+	for _, m := range x {
+		for i, b := range m {
+			p[b>>1&3][i] += inc
+		}
+	}
+	return p
+}
+
+// Consensus generates a consensus string from motif matrix x.
+func (x MotifMatrix) Consensus() DNA8 {
+	k := len(x[0])
+	c := make(DNA8, k)
+	for i := 0; i < k; i++ {
+		var f [4]int
+		maxf := 0
+		var maxb byte
+		for _, m := range x {
+			b := m[i] >> 1 & 3
+			f[b]++
+			if f[b] > maxf {
+				maxf = f[b]
+				maxb = b
+			}
+		}
+		c[i] = "ACTG"[maxb]
+	}
+	return c
+}
+
+// Entropy computes entropy for a motif matrix.  It is the sum of entropies
+// in each column.
+func (x MotifMatrix) Entropy() (e float64) {
+	k := len(x[0])
+	inc := 1 / float64(len(x))
+	for i := 0; i < k; i++ {
+		var f [4]float64
+		for _, m := range x {
+			f[m[i]>>1&3] += inc
+		}
+		for _, p := range f {
+			if p > 0 {
+				e -= p * math.Log2(p)
+			}
+		}
+	}
+	return
+}
+
+// Hamming returns hamming distance between s and t.  Nonsense or panic
+// results if strings are unequal length.
+func (s DNA8) Hamming(t DNA8) (d int) {
+	for i, b := range s {
+		if b&6 != t[i]&6 {
+			d++
+		}
+	}
+	return
+}
+
+// D returns the minimum hamming distance from motif m to any same length kmer
+// in s.
+func (m DNA8) D(s DNA8) int {
+	min := len(m)
+	for i, j := 0, len(m); j < len(s); i, j = i+1, j+1 {
+		if h := m.Hamming(s[i:j]); h < min {
+			min = h
+		}
+	}
+	return min
+}
+
+// D returns sum of DNA8.D over all strings in l.
+func (m DNA8) DD(l []DNA8) (d int) {
+	for _, s := range l {
+		d += m.D(s)
+	}
+	return
+}
+
+// Motif returns the kmers in s having minimum hamming distance from motif m.
+func (m DNA8) Motif(s DNA8) (k []DNA8) {
+	min := len(m)
+	for i, j := 0, len(m); j < len(s); i, j = i+1, j+1 {
+		switch h := m.Hamming(s[i:j]); {
+		case h < min:
+			min = h
+			k = []DNA8{s[i:j]}
+		case h == min:
+			k = append(k, s[i:j])
+		}
+	}
+	return
+}
+
+// Inc "increments" a kmer, for the purpose of iterating over all possible
+// kmers.  The symbol order is ACTG.  A string of all Gs rolls over to
+// all As.
+func (m DNA8) Inc() {
+	for i, b := range m {
+		if n := b & 6; n < 6 {
+			m[i] = "C T G"[n] | b&32
+			return
+		}
+		m[i] = 'A' | b&32
+	}
+}
+
+// MedianString returns a list of kmers that are at minimum distance (by
+// the method DD) to a list of strings l.  The algorithm is brute force
+// and practical only when k is small.
+func MedianString(l []DNA8, k int) (m []DNA8) {
+	z := DNA8(bytes.Repeat([]byte{'A'}, k))
+	min := len(l[0])
+	for p := append(DNA8{}, z...); ; {
+		switch d := p.DD(l); {
+		case d < min:
+			m = []DNA8{append(DNA8{}, p...)}
+			min = d
+		case d == min:
+			m = append(m, append(DNA8{}, p...))
+		default:
+		}
+		p.Inc()
+		if bytes.Equal(p, z) {
+			break
+		}
+	}
+	return
+}
+
+// MotifSearch uses a greedy algorithm.
+func MotifSearch(l []DNA8, k int) (m []DNA8) {
+	bestMotifs := make(MotifMatrix, len(l))
+	for i, s := range l {
+		bestMotifs[i] = s[:k]
+	}
+	motifs := make(MotifMatrix, len(l))
+	s0 := l[0]
+	best := len(motifs) * k
+	for i, j := 0, k; j < len(s0); i, j = i+1, j+1 {
+		motifs[0] = s0[i:j]
+		for i := 1; i < len(l); i++ {
+			p := motifs[:i].LaplaceProfile()
+			motifs[i] = p.Kmer(l[i])[0]
+		}
+		if s := motifs.Score(); s < best {
+			best = s
+			copy(bestMotifs, motifs)
+		}
+	}
+	return bestMotifs
 }
