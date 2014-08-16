@@ -18,7 +18,7 @@ import (
 // such, to avoid confusion with the behavior of case insensitive types
 // such as DNA8.
 
-const LCBit = 0x20 // Bit mask for ASCII alphabetic values
+const LCBit = 0x20 // Bit mask for ASCII lower case
 
 // Freq returns counts of all symbols appearing in a sequence.
 //

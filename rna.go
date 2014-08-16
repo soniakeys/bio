@@ -18,17 +18,17 @@ import (
 // upper and lower case base symbols.
 type RNA []byte
 
+// String converts the receiver to a string.
+func (s RNA) String() string {
+	return string(s)
+}
+
 // RNA8 type represents a sequence of upper or lower case RNA symbols.
 //
 // Allowed symbols are the eight symbols ACUGacug.  Methods on the type
 // assume this.  Methods are thus case-insensitive but may produce nonsense
 // results if the sequence contains non-base symbols.
 type RNA8 []byte
-
-// String converts the receiver to a string.
-func (s RNA) String() string {
-	return string(s)
-}
 
 // String satisfies fmt.Stringer.
 func (s RNA8) String() string {

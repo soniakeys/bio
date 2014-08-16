@@ -5,6 +5,7 @@ package bio
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -14,74 +15,62 @@ import (
 //
 // Amino acid definitions
 
-// AA type holds amino acid sequences.
-type AA []byte
-
 // AA20 type holds amino acid sequences.  Content should be strictly limited
-// to the twenty proteinogenic symbols, in upper case.
+// to the symbols of AA20Alphabet, in upper case.  Methods may panic
+// on other symbols.
 type AA20 []byte
 
-// AA20Alphabet is the set of 20 proteinogenic amino acid symbols.
-const AA20Alphabet = "ACDEFGHIKLMNPQRSTVWY"
-
-func init() {
-	initIntegerMass()
-}
-
-// String returns an AA converted to a string.
-func (s AA) String() string {
-	return string(s)
-}
+const AA20Alphabet = "ACDEFGHIKLMNPQRSTVWY" // IUPAC symbols for the 20 proteinogenic amino acids
 
 // String returns an AA20 converted to a string.
 func (s AA20) String() string {
 	return string(s)
 }
 
-// AAIntegerMassTable holds masses in an array that can be indexed
+// AA20IntegerMassTable holds masses in an array that can be indexed
 // efficiently.
 //
-// Normally you should use the function AAIntegerMass rather than
+// Normally you should use the function AA20IntegerMass rather than
 // access the table directly.
 //
 // Note that the table length is 25 and holds 20 amino acids, so there
 // are a few holes.
-var AAIntegerMassTable [25]int
+var AA20IntegerMassTable [25]int
 
-func initIntegerMass() {
-	AAIntegerMassTable['A'-'A'] = 71
+func init() {
+	AA20IntegerMassTable['A'-'A'] = 71
 
-	AAIntegerMassTable['C'-'A'] = 103
-	AAIntegerMassTable['D'-'A'] = 115
-	AAIntegerMassTable['E'-'A'] = 129
-	AAIntegerMassTable['F'-'A'] = 147
-	AAIntegerMassTable['G'-'A'] = 57
-	AAIntegerMassTable['H'-'A'] = 137
-	AAIntegerMassTable['I'-'A'] = 113
+	AA20IntegerMassTable['C'-'A'] = 103
+	AA20IntegerMassTable['D'-'A'] = 115
+	AA20IntegerMassTable['E'-'A'] = 129
+	AA20IntegerMassTable['F'-'A'] = 147
+	AA20IntegerMassTable['G'-'A'] = 57
+	AA20IntegerMassTable['H'-'A'] = 137
+	AA20IntegerMassTable['I'-'A'] = 113
 
-	AAIntegerMassTable['K'-'A'] = 128
-	AAIntegerMassTable['L'-'A'] = 113
-	AAIntegerMassTable['M'-'A'] = 131
-	AAIntegerMassTable['N'-'A'] = 114
+	AA20IntegerMassTable['K'-'A'] = 128
+	AA20IntegerMassTable['L'-'A'] = 113
+	AA20IntegerMassTable['M'-'A'] = 131
+	AA20IntegerMassTable['N'-'A'] = 114
 
-	AAIntegerMassTable['P'-'A'] = 97
-	AAIntegerMassTable['Q'-'A'] = 128
-	AAIntegerMassTable['R'-'A'] = 156
-	AAIntegerMassTable['S'-'A'] = 87
-	AAIntegerMassTable['T'-'A'] = 101
+	AA20IntegerMassTable['P'-'A'] = 97
+	AA20IntegerMassTable['Q'-'A'] = 128
+	AA20IntegerMassTable['R'-'A'] = 156
+	AA20IntegerMassTable['S'-'A'] = 87
+	AA20IntegerMassTable['T'-'A'] = 101
 
-	AAIntegerMassTable['V'-'A'] = 99
-	AAIntegerMassTable['W'-'A'] = 186
+	AA20IntegerMassTable['V'-'A'] = 99
+	AA20IntegerMassTable['W'-'A'] = 186
 
-	AAIntegerMassTable['Y'-'A'] = 163
+	AA20IntegerMassTable['Y'-'A'] = 163
 }
 
-// AAIntegerMass returns integer mass for one of the 20 proteinogenic amino
+// AA20IntegerMass returns integer mass for one of the 20 proteinogenic amino
 // acids.
 //
 // It panics if aa is not in range 'A'-'Y'.
-func AAIntegerMass(aa byte) int {
-	return AAIntegerMassTable[aa-'A']
+func AA20IntegerMass(aa byte) int {
+	return AA20IntegerMassTable[aa-'A']
 }
 
 // NumSubPepLinear computes the theoretical number of subpeptides of a
@@ -250,7 +239,7 @@ func (pl *lbd) cut(target IntSpecCounts, n int) {
 
 type cand struct {
 	AAInt
-	m int // total mass in AAInt
+	m int // total mass in AA20Int
 	s int // score
 }
 
@@ -339,4 +328,139 @@ func (s IntSpec) Convolve() []int {
 		}
 	}
 	return c[:i]
+}
+
+// AA20MonoisotopicMassTable holds masses in an array that can be indexed
+// efficiently.
+//
+// Normally you should use the function AA20MonoisotopicMass rather than
+// access the table directly.
+//
+// Note that the table length is 25 and holds 20 amino acids, so there
+// are a few holes.
+var AA20MonoisotopicMassTable [25]float64
+
+// Note: must precede init of aaByMass.
+func init() {
+	AA20MonoisotopicMassTable['A'-'A'] = 71.03711
+
+	AA20MonoisotopicMassTable['C'-'A'] = 103.00919
+	AA20MonoisotopicMassTable['D'-'A'] = 115.02694
+	AA20MonoisotopicMassTable['E'-'A'] = 129.04259
+	AA20MonoisotopicMassTable['F'-'A'] = 147.06841
+	AA20MonoisotopicMassTable['G'-'A'] = 57.02146
+	AA20MonoisotopicMassTable['H'-'A'] = 137.05891
+	AA20MonoisotopicMassTable['I'-'A'] = 113.08406
+
+	AA20MonoisotopicMassTable['K'-'A'] = 128.09496
+	AA20MonoisotopicMassTable['L'-'A'] = 113.08406
+	AA20MonoisotopicMassTable['M'-'A'] = 131.04049
+	AA20MonoisotopicMassTable['N'-'A'] = 114.04293
+
+	AA20MonoisotopicMassTable['P'-'A'] = 97.05276
+	AA20MonoisotopicMassTable['Q'-'A'] = 128.05858
+	AA20MonoisotopicMassTable['R'-'A'] = 156.10111
+	AA20MonoisotopicMassTable['S'-'A'] = 87.03203
+	AA20MonoisotopicMassTable['T'-'A'] = 101.04768
+
+	AA20MonoisotopicMassTable['V'-'A'] = 99.06841
+	AA20MonoisotopicMassTable['W'-'A'] = 186.07931
+
+	AA20MonoisotopicMassTable['Y'-'A'] = 163.06333
+}
+
+const AAHeaviest = 'W' // Tryptophan
+
+// aaMass associates an amino acid symbol with a mass in a struct.
+type aaMass struct {
+	aa   byte
+	mass float64
+}
+
+// aaMassList is a container type satisfying sort.Interface.
+type aaMassList []aaMass
+
+func (a aaMassList) Len() int           { return len(a) }
+func (a aaMassList) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a aaMassList) Less(i, j int) bool { return a[i].mass < a[j].mass }
+
+// aaByMass holds a list of the 20 amino acids sorted by mass,
+// in increasing order.
+var aaByMass aaMassList
+
+// Note:  this must follow init of AA20MonoisotopicMassTable.
+func init() {
+	aaByMass = make(aaMassList, len(AA20Alphabet))
+	for i := 0; i < len(AA20Alphabet); i++ {
+		aa := AA20Alphabet[i]
+		aaByMass[i] = aaMass{aa, AA20MonoisotopicMass(aa)}
+	}
+	sort.Sort(aaByMass)
+}
+
+// AA20MonoisotopicMass returns the residue mass of an amino acid.
+//
+// The residue is the amino acid without its water group.
+// Monoisotopic means it is the mass assuming the most common isotope
+// of each element.  The unit is daltons.
+//
+// Symbols not in AA20Alphabet may cause panic.
+func AA20MonoisotopicMass(aa byte) float64 {
+	return AA20MonoisotopicMassTable[aa-'A']
+}
+
+// AA20NearestMass takes a mass m and returns the symbol of the amino acid with
+// monoisotopic residue mass nearest m.  For convenience, it also returns the
+// absolute value of the mass difference.
+func AA20NearestMass(m float64) (aa byte, d float64) {
+	i := sort.Search(20, func(i int) bool { return aaByMass[i].mass >= m })
+	switch i {
+	case 0:
+	case 20:
+		i--
+	default:
+		di := aaByMass[i].mass - m
+		dLess := m - aaByMass[i-1].mass
+		if dLess < di {
+			i--
+		}
+	}
+	aam := aaByMass[i]
+	return aam.aa, math.Abs(m - aam.mass)
+}
+
+const (
+	WaterMassAverage      = 18.01528 // sum of constituent average atomic masses
+	WaterMassMonoisotopic = 18.01056 // sum of constituent monoisotopic masses
+)
+
+// Weight returns the monoisotopic weight of the amino acid chain.
+func (a AA20) Weight() float64 {
+	return a.sum(true)
+}
+
+// perhaps overkill, but the divide and conquer algorithm should preserve
+// precision a little better than linear summing.
+func (a AA20) sum(addWater bool) (s float64) {
+	if len(a) < 10 {
+		if addWater {
+			s = WaterMassMonoisotopic
+		}
+		for _, aa := range a {
+			s += AA20MonoisotopicMass(aa)
+		}
+		return s
+	}
+	half := len(a) / 2
+	return a[:half].sum(addWater) + a[half:].sum(false)
+}
+
+// PrefixSpectrum returns a monoisotopic spectrum of all prefixes of the
+// amino acid string.
+func (s AA20) PrefixSpectrum() []float64 {
+	r := make([]float64, len(s)+1)
+	for i, aa := range s {
+		r[i+1] = r[i] + AA20MonoisotopicMass(aa)
+	}
+	return r
 }
