@@ -142,6 +142,62 @@ func (s DNA8) GCContent() float64 {
 	return float64(c+g) / float64(len(s))
 }
 
+// DNAProfileMatrix represents a DNA profile matrix, useful for constructing
+// consensus sequences.
+//
+// Construct with make(DNAProfileMatrix, seqLen)
+type DNAProfileMatrix []struct{ A, C, G, T int }
+
+// Add adds DNA sequence s to the profile matrix.  Mixed case is allowed.
+// String lengths not equal to the profile matrix length are allowed,
+// with shortages and excesses ignored.
+// Symbols other than DNA bases are ignored.
+func (pm DNAProfileMatrix) Add(s DNA) {
+	if len(s) > len(pm) {
+		s = s[:len(pm)]
+	}
+	for x, b := range s {
+		switch b | LCBit {
+		case 'a':
+			pm[x].A++
+		case 'c':
+			pm[x].C++
+		case 'g':
+			pm[x].G++
+		case 't':
+			pm[x].T++
+		}
+	}
+}
+
+// Consensus returns a consensus string from a populated DNA profile matrix.
+// If no valid DNA symbol ocurred in a particular position in all input
+// sequences, a '-' is emitted in that position.
+func (pm DNAProfileMatrix) Consensus() DNA {
+	cs := make(DNA, len(pm))
+	for x := range cs {
+		c := byte('-') // consensus symbol
+		fc := 0        // freq of consensus symbol
+		if f := pm[x].A; f > fc {
+			c = 'A'
+			fc = f
+		}
+		if f := pm[x].C; f > fc {
+			c = 'C'
+			fc = f
+		}
+		if f := pm[x].G; f > fc {
+			c = 'G'
+			fc = f
+		}
+		if pm[x].T > fc {
+			c = 'T'
+		}
+		cs[x] = c
+	}
+	return cs
+}
+
 // DNAConsensus returns a consensus sequence from multiple sequences.
 //
 // Consensus in each position is simply the most frequent base in that
