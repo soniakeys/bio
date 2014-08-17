@@ -39,6 +39,17 @@ func (s DNA8) String() string {
 	return string(s)
 }
 
+// BaseFreq returns the counts of each of the four DNA bases.
+//
+// Symbols which are not DNA bases are ignored and not included in any count.
+func (s DNA) BaseFreq() (a, c, g, t int) {
+	f := Freq(s)
+	return f['A'] + f['a'],
+		f['C'] + f['c'],
+		f['G'] + f['g'],
+		f['T'] + f['t']
+}
+
 // BaseFreq returns counts of each of the four DNA bases.
 func (s DNA8) BaseFreq() (a, c, t, g int) {
 	return baseFreq8(s)
@@ -47,7 +58,7 @@ func (s DNA8) BaseFreq() (a, c, t, g int) {
 func transcribe(s []byte) []byte {
 	t := append([]byte{}, s...)
 	for i, b := range t {
-		if b&0xdf == 'T' {
+		if b|LCBit == 't' {
 			t[i]++
 		}
 	}
@@ -68,6 +79,25 @@ func (s DNA8) Transcribe() RNA8 {
 	return RNA8(transcribe(s))
 }
 
+// DNAComplement returns the complement of a DNA symbol.  It complements
+// DNA base symbols, preserving case.  If the symbol is not a DNA symbol,
+// it is returned unchanged.
+func DNAComplement(b byte) byte {
+	switch b | LCBit {
+	case 'a', 't':
+		return b ^ 0x15
+	case 'c', 'g':
+		return b ^ 0x04
+	}
+	return b
+}
+
+// DNA8Complement returns the complement of a DNA8 symbol preserving case.
+// If the symbol is not a DNA8 symbol, the result is nonsense.
+func DNA8Complement(b byte) byte {
+	return ^b&2>>1*17 | 4 ^ b
+}
+
 // ReverseComplement returns the reverse complement of the receiver.
 //
 // A new sequence is returned.  The receiver is unmodified.
@@ -77,14 +107,8 @@ func (s DNA) ReverseComplement() DNA {
 	rc := make(DNA, len(s))
 	rcx := len(rc)
 	for _, b := range s {
-		switch b | LCBit {
-		case 'a', 't':
-			b ^= 0x15
-		case 'c', 'g':
-			b ^= 0x04
-		}
 		rcx--
-		rc[rcx] = b
+		rc[rcx] = DNAComplement(b)
 	}
 	return rc
 }
@@ -97,13 +121,22 @@ func (s DNA8) ReverseComplement() DNA8 {
 	rcx := len(rc)
 	for _, b := range s {
 		rcx--
-		rc[rcx] = ^b&2>>1*17 | 4 ^ b
+		rc[rcx] = DNA8Complement(b)
 	}
 	return rc
 }
 
-// GCContent returns the fraction of the sequence that is C or G over the
-// string length.  The value returned is in the range 0 to 1.
+// GCContent returns the fraction of the sequence that is G or C over
+// all DNA bases in the sequence, ignoring case.
+// The value returned is in the range 0 to 1.
+func (s DNA) GCContent() float64 {
+	a, c, g, t := s.BaseFreq()
+	gc := float64(c + g)
+	return gc / (gc + float64(a+t))
+}
+
+// GCContent returns the fraction of the sequence that is G or C over
+// the string length.  The value returned is in the range 0 to 1.
 func (s DNA8) GCContent() float64 {
 	_, c, _, g := baseFreq8(s)
 	return float64(c+g) / float64(len(s))
@@ -595,9 +628,9 @@ func (s DNA8) Hamming(t DNA8) (d int) {
 	return
 }
 
-// D returns the minimum hamming distance from motif m to any same length kmer
-// in s.
-func (m DNA8) D(s DNA8) int {
+// MotifSeqDist returns the minimum hamming distance from motif m
+// to any same length kmer in sequence s.
+func (m DNA8) MotifSeqDistance(s DNA8) int {
 	min := len(m)
 	for i, j := 0, len(m); j < len(s); i, j = i+1, j+1 {
 		if h := m.Hamming(s[i:j]); h < min {
@@ -607,16 +640,23 @@ func (m DNA8) D(s DNA8) int {
 	return min
 }
 
-// D returns sum of DNA8.D over all strings in l.
-func (m DNA8) DD(l []DNA8) (d int) {
+// MotifSetDist is a distance measure from a motif m to a set
+// of strings l.
+//
+// (Not a mathematical set, just a list.)
+//
+// It is the sum of distances MotifSeqDist from m to each string in l.
+func (m DNA8) MotifSetDist(l []DNA8) int {
+	d := 0
 	for _, s := range l {
-		d += m.D(s)
+		d += m.MotifSeqDistance(s)
 	}
-	return
+	return d
 }
 
-// Motif returns the kmers in s having minimum hamming distance from motif m.
-func (m DNA8) Motif(s DNA8) (k []DNA8) {
+// KmersNearestMotif returns the kmers in s having minimum hamming
+// distance from motif m.
+func (m DNA8) KmersNearestMotif(s DNA8) (k []DNA8) {
 	min := len(m)
 	for i, j := 0, len(m); j < len(s); i, j = i+1, j+1 {
 		switch h := m.Hamming(s[i:j]); {
@@ -643,14 +683,14 @@ func (m DNA8) Inc() {
 	}
 }
 
-// MedianString returns a list of kmers that are at minimum distance (by
-// the method DD) to a list of strings l.  The algorithm is brute force
-// and practical only when k is small.
+// MedianString returns a list of kmers that are at minimum distance
+// (by the method MotifSetDist) to a list of strings l.
+// The algorithm is brute force and practical only when k is small.
 func MedianString(l []DNA8, k int) (m []DNA8) {
 	z := DNA8(bytes.Repeat([]byte{'A'}, k))
 	min := len(l[0])
 	for p := append(DNA8{}, z...); ; {
-		switch d := p.DD(l); {
+		switch d := p.MotifSetDist(l); {
 		case d < min:
 			m = []DNA8{append(DNA8{}, p...)}
 			min = d
@@ -687,4 +727,59 @@ func MotifSearch(l []DNA8, k int) (m []DNA8) {
 		}
 	}
 	return bestMotifs
+}
+
+// TTRatio compultes the translation to transversion ratio of two
+// DNA strings.
+//
+// The strings must be of equal length.
+//
+// Non-DNA symbols are ignored, but the function returns false
+// if the strings are of unequal length.
+func TTRatio(s, t DNA) (float64, bool) {
+	if len(t) != len(s) {
+		return 0, false
+	}
+	var ts, tv int
+	for i, si := range s {
+		switch ti := t[i]; ti {
+		case si:
+			continue
+		case 'A', 'G':
+			switch si {
+			case 'A', 'G':
+				ts++
+			case 'C', 'T':
+				tv++
+			}
+		case 'C', 'T':
+			switch si {
+			case 'C', 'T':
+				ts++
+			case 'A', 'G':
+				tv++
+			}
+		}
+	}
+	return float64(ts) / float64(tv), true
+}
+
+// EqRev4 and EqRevSpan are a bit quirky.
+//
+// EqRev4 tests if the first four symbols of s are the reverse
+// of the first four symbols of t, ignoring case
+//
+// It panics if the sequences do not have at least four symbols.
+func EqRev4(s, t DNA) bool {
+	return EqRevIndex(s, t, 3) && EqRevIndex(s[1:], t[1:], 1)
+}
+
+// EqRevIndex returns true if symbols in two sequences are equal
+// but reversed.
+//
+// It tests the symbols s[0] against t[index] and test s[index] against t[0].
+// The comparison is case insensitive.
+// The function panics if the strings do not have at least index+1 symbols.
+func EqRevIndex(s, t DNA, index int) bool {
+	return (s[0]^t[index]|s[index]^t[0])&^LCBit == 0
 }

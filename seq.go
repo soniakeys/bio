@@ -20,13 +20,24 @@ import (
 
 const LCBit = 0x20 // Bit mask for ASCII lower case
 
-// Freq returns counts of all symbols appearing in a sequence.
+// Freq counts the frequency of all symbols appearing in a sequence.
+//
+// The returned array contains a count of each symbol appearing in the sequence.
+func Freq(s []byte) *[256]int {
+	var a [256]int
+	for _, b := range s {
+		a[b]++
+	}
+	return &a
+}
+
+// FreqMap returns counts of all symbols appearing in a sequence.
 //
 // The returned map contains a key for each symbol appearing in the sequence.
 // If a symbol does not appear in the sequence, there will be no map key for it.
 // Upper and lower case are treated as distinct.  If a sequence contains both
 // 'A' and 'a' the result will contain separate counts for the two symbols.
-func Freq(s []byte) map[byte]int {
+func FreqMap(s []byte) map[byte]int {
 	m := map[byte]int{}
 	for _, b := range s {
 		m[b]++

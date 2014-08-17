@@ -8,7 +8,7 @@ import (
 
 func ExampleFreq() {
 	s := bio.DNA("Agatha")
-	h := bio.Freq(s)
+	h := bio.FreqMap(s)
 	fmt.Println(len(h), "symbols")
 	for _, b := range []byte("Aaght") {
 		fmt.Printf("%c %d\n", b, h[b])
