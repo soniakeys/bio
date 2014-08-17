@@ -8,7 +8,7 @@ import (
 )
 
 func ExampleReadFasta() {
-	r := bytes.NewBufferString(`>sequence header
+	r := bytes.NewBufferString(`>sequenceID more stuff
 AGACCA
 TACCA`)
 	s, err := bio.ReadFASTA(r)
@@ -16,9 +16,14 @@ TACCA`)
 		fmt.Println(err)
 		return
 	}
-	fmt.Println(s[0].Header)
+	fmt.Println(len(s), "sequence")
+	f := s[0]
+	fmt.Println(f.ID())
+	fmt.Println(f.Header)
 	fmt.Println(bio.DNA(s[0].Seq))
 	// Output:
-	// >sequence header
+	// 1 sequence
+	// sequenceID
+	// >sequenceID more stuff
 	// AGACCATACCA
 }

@@ -7,12 +7,28 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"strings"
 )
+
+// This file currently has two separate readers.  They both return FASTASeq
+// results at this point, But need further integration.  (TODO)
 
 // FASTASeq is a sequence annotated with a header.
 type FASTASeq struct {
-	Header string
+	Header string // complete header line, including '>'
 	Seq    []byte
+}
+
+// ID extracts the sequence identifier from the header.
+func (f FASTASeq) ID() string {
+	if f.Header == "" {
+		return ""
+	}
+	id := f.Header[1:]
+	if sp := strings.IndexByte(id, ' '); sp > 0 {
+		return id[:sp]
+	}
+	return id
 }
 
 // ReadFASTA reads FASTA format from an io.Reader
@@ -20,7 +36,7 @@ type FASTASeq struct {
 // Super minimal whole-file reader.  It allows blank lines,
 // it trims leading and trailing white space, and it
 // allows both lf and crlf line endings.  No other frills.
-// Headers are returned unparsed.  The leading > isn't even removed.
+// Headers are stored unparsed.
 //
 // The first non-blank line must be a header.  A FASTASeq is returned
 // for every header line, even if there is no data following the header.
@@ -49,10 +65,12 @@ func ReadFASTA(r io.Reader) (seq []FASTASeq, err error) {
 	return seq, nil
 }
 
+// second reader follows
+
 // FASTAReader type for representing a FASTA stream.
 type FASTAReader struct {
-	r      *bufio.Reader
-	nextID string
+	r          *bufio.Reader
+	nextHeader string
 }
 
 // NewFASTAReader constructs and returns a FASTAReader around a bufio.Reader.
@@ -62,21 +80,21 @@ func NewFASTAReader(r *bufio.Reader) FASTAReader {
 
 // ReadSequence returns a single sequence on each call.
 //
-// The entire header line following '>' is returned as seqID.
 // A successful read is indicated by err = nil for all sequences, including
 // the last.  Subsequent calls return err = io.EOF.
 // Other error values indicate problems.
-func (r *FASTAReader) ReadSequence() (seqID string, seq []byte, err error) {
-	seqID = r.nextID
-	r.nextID = ""
+func (r *FASTAReader) ReadSequence() (FASTASeq, error) {
+	f := FASTASeq{r.nextHeader, nil}
+	r.nextHeader = ""
 	var line []byte
 	var isPre bool
+	var err error
 read:
 	for {
 		line, isPre, err = r.r.ReadLine()
 		switch {
 		case err != nil:
-			if err == io.EOF && seqID > "" {
+			if err == io.EOF && f.Header > "" {
 				err = nil
 			}
 			break read
@@ -86,30 +104,30 @@ read:
 		case len(line) == 0: // ignore blank lines
 			continue
 		case line[0] == '>': // info line
-			if seqID > "" {
-				r.nextID = string(line[1:])
+			if f.Header > "" {
+				r.nextHeader = string(line)
 				break read
 			}
-			seqID = string(line[1:])
-		case seqID > "":
-			seq = append(seq, line...)
+			f.Header = string(line)
+		case f.Header > "":
+			f.Seq = append(f.Seq, line...)
 		default:
-			// ignore string data without seqID
+			// ignore inital data without Header?
 		}
 	}
-	return
+	return f, err
 }
 
 // ReadFASTAFile is a high level function that reads an entire FASTA file
 // into memory.
-func ReadFASTAFile(path string) (list []FASTASeq, err error) {
-	var f *os.File
-	if f, err = os.Open(path); err != nil {
-		return
+func ReadFASTAFile(path string) ([]FASTASeq, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
 	}
-	var s FASTASeq
+	var list []FASTASeq
 	for r := NewFASTAReader(bufio.NewReader(f)); ; {
-		s.Header, s.Seq, err = r.ReadSequence()
+		s, err := r.ReadSequence()
 		if err != nil {
 			break
 		}
