@@ -9,27 +9,27 @@ import (
 	"os"
 )
 
-// FastaSeq is a sequence annotated with a header.
-type FastaSeq struct {
+// FASTASeq is a sequence annotated with a header.
+type FASTASeq struct {
 	Header string
 	Seq    []byte
 }
 
-// ReadFasta reads FASTA format from an io.Reader
+// ReadFASTA reads FASTA format from an io.Reader
 //
 // Super minimal whole-file reader.  It allows blank lines,
 // it trims leading and trailing white space, and it
 // allows both lf and crlf line endings.  No other frills.
 // Headers are returned unparsed.  The leading > isn't even removed.
 //
-// The first non-blank line must be a header.  A FastaSeq is returned
+// The first non-blank line must be a header.  A FASTASeq is returned
 // for every header line, even if there is no data following the header.
-func ReadFasta(r io.Reader) (seq []FastaSeq, err error) {
+func ReadFASTA(r io.Reader) (seq []FASTASeq, err error) {
 	d, err := ioutil.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
-	var last *FastaSeq
+	var last *FASTASeq
 	foundHeader := false
 	for _, l := range bytes.Split(d, []byte{'\n'}) {
 		l = bytes.TrimSpace(l)
@@ -38,7 +38,7 @@ func ReadFasta(r io.Reader) (seq []FastaSeq, err error) {
 			continue // skip blank line
 		case l[0] == '>':
 			foundHeader = true // new seq
-			seq = append(seq, FastaSeq{string(l), nil})
+			seq = append(seq, FASTASeq{string(l), nil})
 			last = &seq[len(seq)-1]
 			continue
 		case !foundHeader:
@@ -100,22 +100,16 @@ read:
 	return
 }
 
-// FASTASeq is the type returned by ReadFASTA.
-type FASTASeq struct {
-	SeqID string
-	Seq   []byte
-}
-
-// ReadFASTA is a high level function that reads an entire FASTA file into
-// memory.
-func ReadFASTA(path string) (list []FASTASeq, err error) {
+// ReadFASTAFile is a high level function that reads an entire FASTA file
+// into memory.
+func ReadFASTAFile(path string) (list []FASTASeq, err error) {
 	var f *os.File
 	if f, err = os.Open(path); err != nil {
 		return
 	}
 	var s FASTASeq
 	for r := NewFASTAReader(bufio.NewReader(f)); ; {
-		s.SeqID, s.Seq, err = r.ReadSequence()
+		s.Header, s.Seq, err = r.ReadSequence()
 		if err != nil {
 			break
 		}

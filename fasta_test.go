@@ -11,7 +11,7 @@ func ExampleReadFasta() {
 	r := bytes.NewBufferString(`>sequence header
 AGACCA
 TACCA`)
-	s, err := bio.ReadFasta(r)
+	s, err := bio.ReadFASTA(r)
 	if err != nil {
 		fmt.Println(err)
 		return
