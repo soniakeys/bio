@@ -342,7 +342,7 @@ func (s DNA8) AAFindAllIndex(pep AA20) (r []int) {
 	for f := 0; f < 3; f++ {
 		t = t[:(len(s)-f)/3]
 		for i, j := f, 0; j < len(t); i, j = i+3, j+1 {
-			t[j] = translateCodon8(s[i], s[i+1], s[i+2])
+			t[j] = TranslateCodon(s[i], s[i+1], s[i+2])
 		}
 		x := AllIndex(pep, t)
 		for i, p := range x {

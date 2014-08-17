@@ -7,29 +7,20 @@ import (
 	"github.com/soniakeys/bio"
 )
 
-func ExampleIsDNAStart() {
-	fmt.Println(bio.IsDNAStart('A', 'G', 'G'))
-	fmt.Println(bio.IsDNAStart('A', 'T', 'G'))
-	fmt.Println(bio.IsDNAStart('a', 't', 'g'))
+func ExampleIsStartCodon() {
+	fmt.Println(bio.IsStartCodon('C', 'U', 'G'))
+	fmt.Println(bio.IsStartCodon('A', 'U', 'G'))
+	fmt.Println(bio.IsStartCodon('a', 'u', 'g'))
+	fmt.Println(bio.IsStartCodon('a', 't', 'g'))
 	// Output:
 	// false
 	// true
 	// true
-}
-
-func ExampleIsRNAStart() {
-	fmt.Println(bio.IsRNAStart('A', 'T', 'G'))
-	fmt.Println(bio.IsRNAStart('A', 'U', 'G'))
-	fmt.Println(bio.IsRNAStart('a', 'u', 'g'))
-	// Output:
-	// false
-	// true
 	// true
 }
 
-func ExampleRNA8_Translate() {
-	s := bio.RNA8("AugGcgAacAauUacUga")
-	a, err := s.Translate()
+func ExampleTranslate8() {
+	a, err := bio.Translate8(bio.RNA8("AugGcgAacAauUacUga"))
 	fmt.Printf("%T\n", a)
 	fmt.Println(a)
 	if err != nil {

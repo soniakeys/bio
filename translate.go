@@ -12,19 +12,39 @@ import (
 	"regexp"
 )
 
-// lookup table for translation.
-// condonIndex and translateCodon should inline nicely.
-const (
-	aaStop = '*'
-	codons = "KNNKTTTTIIIMRSSRQHHQPPPPLLLLRRRR*YY*SSSSLFFL*CCWEDDEAAAAVVVVGGGG"
-)
+// CodonTable allows lookup of an amino acid symbol by a 6 bit index
+// corresponding to a codon.
+//
+// Use CodonIndex() to compute a suitable index.
+//
+// Use the function TranslateCodon though in preference to directly indexing
+// the table.
+var CodonTable [64]byte
 
-func codonIndex8(b0, b1, b2 byte) int {
+func init() {
+	copy(CodonTable[:], []byte(
+		"KNNKTTTTIIIMRSSRQHHQPPPPLLLLRRRR*YY*SSSSLFFL*CCWEDDEAAAAVVVVGGGG"))
+}
+
+const AAStop = '*' // symbol for stop codon
+
+// CodonIndex computes a 6 bit index suitable for indexing CodonTable.
+//
+// Arguments are three consecutive symbols of RNA or DNA and should be
+// DNA8 or RNA8 symbols.
+func CodonIndex(b0, b1, b2 byte) int {
+	// &6 bit mask produces these values:
+	// A   = 00
+	// C   = 01
+	// U,T = 10
+	// G   = 11
 	return int(b0&6<<3 | b1&6<<1 | b2&6>>1)
 }
 
-func translateCodon8(b0, b1, b2 byte) byte {
-	return codons[codonIndex8(b0, b1, b2)]
+// TranslateCodon translates a sequence of three DNA8 or RNA8 bases into
+// an amino acid symbol of AA20Alphabet or the stop symbol AAStop.
+func TranslateCodon(b0, b1, b2 byte) byte {
+	return CodonTable[CodonIndex(b0, b1, b2)]
 }
 
 const (
@@ -32,58 +52,62 @@ const (
 	RNAStart = "AUG" // RNA start codon
 )
 
-// IsRNAStart tests for the RNA start codon.
+// IsStartCodon tests for a DNA or RNA start codon.
 //
-// The arguments represent a sequence of RNA bases.
-// Comparison is case insensitive.
-func IsRNAStart(b0, b1, b2 byte) bool {
-	// force bytes to upper case
-	return b0&^LCBit == RNAStart[0] &&
-		b1&^LCBit == RNAStart[1] &&
-		b2&^LCBit == RNAStart[2]
+// The arguments should be a sequence of DNA8 or RNA8 symbols.
+func IsStartCodon(b0, b1, b2 byte) bool {
+	return b0&6 == 'a'&6 && b1&6 == 'u'&6 && b2&6 == 'g'&6
 }
 
-// IsDNAStart tests for the DNA start codon.
+// Translate8 translates DNA or RNA into an amino acid sequence.
 //
-// The arguments represent a sequence of DNA bases.
-// Comparison is case insensitive.
-func IsDNAStart(b0, b1, b2 byte) bool {
-	// force bytes to upper case
-	return b0&^LCBit == DNAStart[0] &&
-		b1&^LCBit == DNAStart[1] &&
-		b2&^LCBit == DNAStart[2]
-}
-
-var dnaStartRx = regexp.MustCompile("[Aa][Tt][Gg]")
-
-// Translate translates RNA and returns an amino acid sequence.
+// Argument seq should be DNA8 or RNA8.  Sequences containing other symbols
+// will give nonsense results.
 //
-// Translation begins at the start of the sequence.  The sequence should begin
-// with the RNA start codon.  Translation ends at a stop codon or at the
-// end of the sequence.
+// Translation begins at the beginning of the sequence.  A start codon
+// is not required.  Translation ends at a stop codon or at the end of
+// the sequence.
 //
-// Errors are returned for no start codon and no stop codon but the
-// translated sequence is returned in any case.
-func (s RNA8) Translate() (a AA20, err error) {
-	if len(s) < 3 || !IsRNAStart(s[0], s[1], s[2]) {
-		err = errors.New("No start codon")
-	}
-	return translate8(s)
-}
-
-func translate8(s []byte) (a AA20, err error) {
-	for p := 0; ; p += 3 {
-		if p+3 > len(s) {
-			err = errors.New("No stop codon")
-			return
-		}
-		aa := translateCodon8(s[p], s[p+1], s[p+2])
-		if aa == aaStop {
-			return
+// An error is returned if there is no stop codon.
+// The translated sequence is always returned.
+func Translate8(seq []byte) (AA20, error) {
+	var a AA20
+	for p := 2; p < len(seq); p += 3 {
+		aa := TranslateCodon(seq[p-2], seq[p-1], seq[p])
+		if aa == AAStop {
+			return a, nil
 		}
 		a = append(a, aa)
 	}
+	return a, errors.New("No stop codon")
 }
+
+/*
+// translate8 translates a DNA8 or RNA8 sequence into an AA20 sequence.
+//
+// The function can translate either DNA or RNA.  The sequence s must begin with
+// the specified start codon which should be either the DNAStart or RNAStart.
+// Translation ends at a stop codon, which must be present.
+// Errors are returned for no start codon or no stop codon.
+func translate8(s, startCodon []byte) (AA20, error) {
+	if !bytes.HasPrefix(s, startCodon) {
+		return nil, errors.New("No start codon")
+	}
+	a := AA20{'M'}
+	for p := 3; ; p += 3 {
+		if p+3 > len(s) {
+			return nil, errors.New("No stop codon")
+		}
+		aa := CodonTable[CodonIndex(s[p], s[p+1], s[p+2])]
+		if aa == AAStop {
+			break
+		}
+		a = append(a, aa)
+	}
+	return a, nil
+}
+*/
+var dnaStartRx = regexp.MustCompile("[Aa][Tt][Gg]")
 
 // TranslateORF locates and translates all open reading frames in a sequence.
 //
@@ -99,7 +123,7 @@ func (s DNA8) TranslateORF() []AA20 {
 				return
 			}
 			s = s[start[0]:]
-			ps, err := translate8(s)
+			ps, err := Translate8(s)
 			if err == nil {
 				m[string(ps)] = ps
 			}
