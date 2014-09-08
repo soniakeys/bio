@@ -19,16 +19,10 @@ func ExampleIsStartCodon() {
 	// true
 }
 
-func ExampleTranslate8() {
-	a, err := bio.Translate8(bio.RNA8("AugGcgAacAauUacUga"))
-	fmt.Printf("%T\n", a)
-	fmt.Println(a)
-	if err != nil {
-		fmt.Println(err)
-	}
+func ExampleRNA8_Translate() {
+	fmt.Println(bio.RNA8("AugGcgAacAauUacUga").Translate())
 	// Output:
-	// bio.AA20
-	// MANNY
+	// MANNY true
 }
 
 func ExampleDNA8_TranslateORF() {
