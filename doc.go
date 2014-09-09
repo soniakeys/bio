@@ -19,10 +19,19 @@
 // with some indication of the expected symbol set and are documented with
 // a list or description of the symbols.  Methods on the type will assume
 // the symbol set.  For example the type DNA8 holds the eight symbols
-// ACGTacgt.
+// ACTGactg.
 //
 // The package API does not duplicate methods across all possible types.
 // The main purpose of the package is to explore algorithms, not to be
 // comprehensive.  Further, it's not obvious that orthogonality would even
 // be necessary in practical applications.
+//
+// Bit twiddling and base order
+//
+// This library usually works with bases in the order ACTG and ACUG.
+// In this order, bits 1 and 2 of the ASCII representations are 00, 01, 10,
+// and 11, allowing indexes 0, 1, 2, 3 to be directly obtained from the ASCII.
+// Yes, T and U are the same, 10.  In some cases this bit pattern is exploited
+// for efficiency, in other cases this base order is maintained just for
+// consistency within the library.
 package bio

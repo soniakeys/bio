@@ -42,12 +42,12 @@ func (s DNA8) String() string {
 // BaseFreq returns the counts of each of the four DNA bases.
 //
 // Symbols which are not DNA bases are ignored and not included in any count.
-func (s DNA) BaseFreq() (a, c, g, t int) {
+func (s DNA) BaseFreq() (a, c, t, g int) {
 	f := Freq(s)
 	return f['A'] + f['a'],
 		f['C'] + f['c'],
-		f['G'] + f['g'],
-		f['T'] + f['t']
+		f['T'] + f['t'],
+		f['G'] + f['g']
 }
 
 // BaseFreq returns counts of each of the four DNA bases.
@@ -130,7 +130,7 @@ func (s DNA8) ReverseComplement() DNA8 {
 // all DNA bases in the sequence, ignoring case.
 // The value returned is in the range 0 to 1.
 func (s DNA) GCContent() float64 {
-	a, c, g, t := s.BaseFreq()
+	a, c, t, g := s.BaseFreq()
 	gc := float64(c + g)
 	return gc / (gc + float64(a+t))
 }
@@ -146,7 +146,7 @@ func (s DNA8) GCContent() float64 {
 // consensus sequences.
 //
 // Construct with make(DNAProfileMatrix, seqLen)
-type DNAProfileMatrix []struct{ A, C, G, T int }
+type DNAProfileMatrix []struct{ A, C, T, G int }
 
 // Add adds DNA sequence s to the profile matrix.  Mixed case is allowed.
 // String lengths not equal to the profile matrix length are allowed,
@@ -162,10 +162,10 @@ func (pm DNAProfileMatrix) Add(s DNA) {
 			pm[x].A++
 		case 'c':
 			pm[x].C++
-		case 'g':
-			pm[x].G++
 		case 't':
 			pm[x].T++
+		case 'g':
+			pm[x].G++
 		}
 	}
 }
@@ -173,8 +173,8 @@ func (pm DNAProfileMatrix) Add(s DNA) {
 // Consensus returns a consensus string from a populated DNA profile matrix.
 // If no valid DNA symbol ocurred in a particular position in all input
 // sequences, a '-' is emitted in that position.
-func (pm DNAProfileMatrix) Consensus() DNA {
-	cs := make(DNA, len(pm))
+func (pm DNAProfileMatrix) Consensus() (cs DNA, score int) {
+	cs = make(DNA, len(pm))
 	for x := range cs {
 		c := byte('-') // consensus symbol
 		fc := 0        // freq of consensus symbol
@@ -186,16 +186,18 @@ func (pm DNAProfileMatrix) Consensus() DNA {
 			c = 'C'
 			fc = f
 		}
+		if f := pm[x].T; f > fc {
+			c = 'T'
+			fc = f
+		}
 		if f := pm[x].G; f > fc {
 			c = 'G'
 			fc = f
 		}
-		if pm[x].T > fc {
-			c = 'T'
-		}
 		cs[x] = c
+		score += fc
 	}
-	return cs
+	return
 }
 
 // DNAConsensus returns a consensus sequence from multiple sequences.
@@ -220,7 +222,7 @@ func DNAConsensus(c []DNA) (seq DNA, score int) {
 	}
 	const bases = "A C T G"
 	r := make(DNA, len(s))
-	// profile posistion by position, without constructing profile matrix
+	// compute position by position, without constructing profile matrix
 	for i := range r {
 		// profile
 		var n [7]int
@@ -275,7 +277,7 @@ func DNA8Consensus(c []DNA8) (seq DNA8, score int) {
 	}
 	const bases = "A C T G"
 	r := make(DNA8, len(s))
-	// profile posistion by position, without constructing profile matrix
+	// compute position by position, without constructing profile matrix
 	for i := range r {
 		// profile
 		var n [7]int

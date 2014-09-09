@@ -2,7 +2,6 @@ package bio_test
 
 import (
 	"fmt"
-	"testing"
 
 	"github.com/soniakeys/bio"
 )
@@ -62,22 +61,21 @@ func ExampleDNA8_GCContent() {
 	// 0.667
 }
 
-func TestConsensus(t *testing.T) {
-	pm := make(bio.DNAProfileMatrix, 8)
-	for _, s := range []string{
-		"ATCCpGCT",
-		"GGGCqACT",
-		"ATGG-TCT",
-		"AAGC.ACC",
-		"TTGGxACT",
-		"ATGCyATT",
-		"ATGGzACT",
-	} {
+func ExampleDNAProfileMatrix() {
+	set := []string{
+		"GAT..ca",
+		"AA##cgg",
+		"GACrcca",
+		"Gxxxaca",
+		"GATmaca",
+	}
+	pm := make(bio.DNAProfileMatrix, len(set[0]))
+	for _, s := range set {
 		pm.Add(bio.DNA(s))
 	}
-	if c := pm.Consensus(); c.String() != "ATGC-ACT" {
-		t.Fatal("got", c, "want ATGC-ACT")
-	}
+	fmt.Println(pm.Consensus())
+	// Output:
+	// GAT-ACA 20
 }
 
 func ExampleDNAConsensus() {

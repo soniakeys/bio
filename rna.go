@@ -3,10 +3,6 @@
 
 package bio
 
-import (
-//	"errors"
-)
-
 // rna.go
 //
 // Types and methods that are specific to RNA or optimized for RNA.
