@@ -822,22 +822,73 @@ func TTRatio(s, t DNA) (float64, bool) {
 	return float64(ts) / float64(tv), true
 }
 
-// EqRev4 and EqRevSpan are a bit quirky.
-//
-// EqRev4 tests if the first four symbols of s are the reverse
-// of the first four symbols of t, ignoring case
-//
-// It panics if the sequences do not have at least four symbols.
-func EqRev4(s, t DNA) bool {
-	return EqRevIndex(s, t, 3) && EqRevIndex(s[1:], t[1:], 1)
-}
+// PalIndex is a return type for FindPalAllIndex
+type PalIndex struct{ Index, Len int }
 
-// EqRevIndex returns true if symbols in two sequences are equal
-// but reversed.
+// FindAllPalIndex finds palindrome sequences.
 //
-// It tests the symbols s[0] against t[index] and test s[index] against t[0].
-// The comparison is case insensitive.
-// The function panics if the strings do not have at least index+1 symbols.
-func EqRevIndex(s, t DNA, index int) bool {
-	return (s[0]^t[index]|s[index]^t[0])&^LCBit == 0
+// A palindrome sequence equals its reverse complement.  Arguments min and max
+// are minimum and maximum lengths of palindrome sequences to find.
+//
+// Returned is a list of indexes and lengths of all palindrome sequences
+// with length from min to max inclusive.
+func (s DNA8) FindAllPalIndex(min, max int) (p []PalIndex) {
+	switch {
+	case min < 2:
+		min = 2
+	case min&1 == 1:
+		min++
+	}
+	if len(s) < min {
+		return nil
+	}
+	if len(s) < max {
+		max = len(s)
+	}
+	if max&1 == 1 {
+		max--
+	}
+	if max < min {
+		return nil
+	}
+
+	// the algorithm scans a sliding window of the receiver sequence s.
+	// the window size starts at min for the beginning of the seqence and
+	// increments to max for scanning the interior of the sequence, then
+	// decrements back down to min at the end.  actually the window size
+	// isn't directly needed -- more useful is inner, the index of the inner
+	// pair in t.
+	inner := min/2 - 1 // initial value corresponding to min window size.
+
+	x := 0 // index of window in s
+
+	// scan from inner and work out.
+	// if a check fails at any point, skip remaining checks.
+	// for all palindromes >= min, append result.
+	scan := func() {
+		for i, j, n := inner, inner+1, 2; i >= 0; i, j, n = i-1, j+1, n+2 {
+			// bit twiddling solution by "i"
+			xr := (s[x+i] ^ s[x+j]) &^ LCBit
+			if xr != 'A'^'T' && xr != 'C'^'G' {
+				break
+			}
+			if n >= min {
+				p = append(p, PalIndex{x + i, n})
+			}
+		}
+	}
+	// short windows at the beginning of s
+	for imax := max/2 - 1; inner < imax; inner++ {
+		scan()
+	}
+	// interior of s
+	for end := len(s) - max; x < end; x++ {
+		scan()
+	}
+	// windows at end of s
+	for end := len(s) - min; x <= end; x += 2 {
+		scan()
+		inner--
+	}
+	return p
 }
