@@ -125,16 +125,6 @@ func ReadFASTAFile(path string) ([]FASTASeq, error) {
 	if err != nil {
 		return nil, err
 	}
-	var list []FASTASeq
-	for r := NewFASTAReader(bufio.NewReader(f)); ; {
-		s, err := r.ReadSequence()
-		if err != nil {
-			break
-		}
-		list = append(list, s)
-	}
-	if err != io.EOF {
-		return nil, err
-	}
-	return list, nil
+	defer f.Close()
+	return ReadFASTA(f)
 }

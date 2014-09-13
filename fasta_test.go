@@ -7,7 +7,7 @@ import (
 	"github.com/soniakeys/bio"
 )
 
-func ExampleReadFasta() {
+func ExampleReadFASTA() {
 	r := bytes.NewBufferString(`>sequenceID more stuff
 AGACCA
 TACCA`)
