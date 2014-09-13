@@ -822,17 +822,20 @@ func TTRatio(s, t DNA) (float64, bool) {
 	return float64(ts) / float64(tv), true
 }
 
-// PalIndex is a return type for FindPalAllIndex
-type PalIndex struct{ Index, Len int }
+// PalIndex is a return type for FindPalAllIndex.
+type PalIndex struct {
+	Index int // index where a palindrome was found
+	Len   int // length of the palindrome
+}
 
-// FindAllPalIndex finds palindrome sequences.
+// PalFindAllIndex finds palindrome sequences.
 //
 // A palindrome sequence equals its reverse complement.  Arguments min and max
 // are minimum and maximum lengths of palindrome sequences to find.
 //
 // Returned is a list of indexes and lengths of all palindrome sequences
 // with length from min to max inclusive.
-func (s DNA8) FindAllPalIndex(min, max int) (p []PalIndex) {
+func (s DNA8) PalFindAllIndex(min, max int) (p []PalIndex) {
 	switch {
 	case min < 2:
 		min = 2

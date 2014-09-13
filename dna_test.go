@@ -104,9 +104,9 @@ func ExampleDNA8Consensus() {
 	// GATTACA 28
 }
 
-func ExampleDNA8_FindAllPalIndex() {
+func ExampleDNA8_PalFindAllIndex() {
 	s := bio.DNA8("CAATGCATG")
-	for _, p := range s.FindAllPalIndex(4, 8) {
+	for _, p := range s.PalFindAllIndex(4, 8) {
 		fmt.Printf("%d: %s\n", p.Index, s[p.Index:p.Index+p.Len])
 	}
 	// Output:
