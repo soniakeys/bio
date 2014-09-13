@@ -5,6 +5,7 @@ package bio
 
 import (
 	"bytes"
+	"regexp"
 	"sort"
 	"strings"
 )
@@ -276,6 +277,24 @@ func KmerComposition(k int, s string) []string {
 	}
 	sort.Strings(c)
 	return c
+}
+
+// Splice removes specified sequences (introns) from a longer sequence.
+//
+// Argument intr is the list of sequences to remove.
+// The result is seq with intr sequences removed.
+//
+// The algorithm performs a simple one-time removal. It does not deal with
+//  overlapping matches or matches on the spliced sequences.
+func Splice(seq []byte, intr []string) []byte {
+	if len(intr) == 0 {
+		return seq
+	}
+	q := make([]string, len(intr))
+	for i, t := range intr {
+		q[i] = regexp.QuoteMeta(t)
+	}
+	return regexp.MustCompile(strings.Join(q, "|")).ReplaceAllLiteral(seq, nil)
 }
 
 // ugh.  don't like any of this stuff
