@@ -129,11 +129,11 @@ func MotifCount(m, s []byte) (x int) {
 	return
 }
 
-// ModalKmer returns the most frequent k-mers in a string.
+// ModalKmers returns the most frequent k-mers in a string.
 //
 //	k is the k-mer length
 //	s is the string
-func ModalKmer(k int, s string) (m []string) {
+func ModalKmers(k int, s string) (m []string) {
 	f := map[string]int{}
 	max := 0
 	for i, j := 0, k; j <= len(s); i, j = i+1, j+1 {
