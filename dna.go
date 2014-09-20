@@ -362,9 +362,9 @@ func (k DNA8) HammingVariants(h int) []string {
 	return v
 }
 
-// ModalVariantKmer returns the most frequent DNA k-mers within hamming
+// ModalHammingKmer returns the most frequent DNA k-mers within hamming
 // distance h of any k-mer present in receiver string s.
-func (s DNA8) ModalVariantKmer(k, h int) (m []string) {
+func (s DNA8) ModalHammingKmer(k, h int) (m []string) {
 	c := map[string][]string{}
 	f := map[string]int{}
 	max := 0
@@ -391,14 +391,14 @@ func (s DNA8) ModalVariantKmer(k, h int) (m []string) {
 	return
 }
 
-// ModalVariantKmer returns the most frequent DNA k-mers within hamming
+// ModalHammingKmer returns the most frequent DNA k-mers within hamming
 // distance h of any k-mer present in either receiver string s or the
 // reverse complement of s
-func (s DNA8) ModalVariantKmerRC(k, h int) (m []string) {
+func (s DNA8) ModalHammingKmerRC(k, h int) (m []string) {
 	c := map[string][]string{}
 	f := map[string]int{}
 	max := 0
-	// TODO pull this out and share with ModalVariantKmer
+	// TODO pull this out and share with ModalHammingKmer
 	tally := func(k0 DNA8) {
 		s0 := string(k0)
 		v, ok := c[s0]
