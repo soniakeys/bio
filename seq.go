@@ -152,7 +152,7 @@ func ModalKmers(k int, s string) (m []string) {
 }
 
 func KmerClumps(k, L, t int, s string) []string {
-	cs := map[string]bool{}  // clump set. found clumps.
+	cs := map[string]struct{}{}  // clump set. found clumps.
 	pm := map[string][]int{} // position map. start positions by kmer.
 	w := L - k               // window for start positions
 	for i, j := 0, k; j <= len(s); i, j = i+1, j+1 {
@@ -160,7 +160,7 @@ func KmerClumps(k, L, t int, s string) []string {
 		sp := append(pm[kmer], i)
 		pm[kmer] = sp
 		if len(sp) >= t && i-sp[len(sp)-t] <= w {
-			cs[kmer] = true
+			cs[kmer] = struct{}{}
 		}
 	}
 	c := make([]string, len(cs))
