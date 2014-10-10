@@ -9,6 +9,8 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/soniakeys/multiset"
 )
 
 // aa.go
@@ -31,7 +33,7 @@ func (s AA) String() string {
 // on other symbols.
 type AA20 []byte
 
-const AA20Alphabet = "ACDEFGHIKLMNPQRSTVWY" // IUPAC symbols for the 20 proteinogenic amino acids
+var AA20Alphabet = AA20("ACDEFGHIKLMNPQRSTVWY") // IUPAC symbols for the 20 proteinogenic amino acids
 
 // String returns an AA20 converted to a string.
 func (s AA20) String() string {
@@ -46,7 +48,7 @@ func (s AA20) String() string {
 //
 // Note that the table length is 25 and holds 20 amino acids, so there
 // are a few holes.
-var AA20IntegerMassTable [25]int
+var AA20IntegerMassTable [25]uint8
 
 func init() {
 	AA20IntegerMassTable['A'-'A'] = 71
@@ -80,7 +82,7 @@ func init() {
 // acids.
 //
 // It panics if aa is not in range 'A'-'Y'.
-func AA20IntegerMass(aa byte) int {
+func AA20IntegerMass(aa byte) uint8 {
 	return AA20IntegerMassTable[aa-'A']
 }
 
@@ -112,9 +114,24 @@ func (x IntSpec) Equal(y IntSpec) bool {
 	return true
 }
 
+// MassCounts represents mass counts of an IntSpec or convolution, for example.
+//
+// Elements of the embedded multiset have the dynamic type int.
+type MassCounts struct {
+	multiset.Multiset
+}
+
+func (p AA20) Int() AAInt {
+	m := make(AAInt, len(p))
+	for i, a := range p {
+		m[i] = AA20IntegerMass(a)
+	}
+	return m
+}
+
 // Amino acid integer masses.  Like type AA, represents a peptide,
 // but coded by integer mass rather than symbol.
-type AAInt []byte
+type AAInt []uint8
 
 // String returns a string of masses separated with '-' characters.
 func (p AAInt) String() string {
@@ -142,7 +159,7 @@ func (p AAInt) CyclicSpec() IntSpec {
 }
 
 // The 18 uinique integer masses out of the 20 proteinogenic amino acids.
-var am18 = AAInt{57, 71, 87, 97, 99, 101, 103, 113, 114,
+var AA18Int = AAInt{57, 71, 87, 97, 99, 101, 103, 113, 114,
 	115, 128, 129, 131, 137, 147, 156, 163, 186}
 
 // expand grows each peptide in l by appending a single amino acid to the end.
@@ -150,40 +167,33 @@ var am18 = AAInt{57, 71, 87, 97, 99, 101, 103, 113, 114,
 // will be 18 times the length of the argument list l.
 func expand(l []AAInt) (e []AAInt) {
 	for _, p := range l {
-		for _, a := range am18 {
+		for _, a := range AA18Int {
 			e = append(e, append(p[:len(p):len(p)], a))
 		}
 	}
 	return
 }
 
-// IntSpecCounts represents an integer mass spectrum as counts of each
-// unique mass.
-//
-// This data structure is termed a multiset.
-//
-// The map key is integer mass, the map value is the number of occurrences.
-type IntSpecCounts map[int]int
-
-// Counts builds an IntSpecCounts object corresponding to the receiver.
-func (s IntSpec) Counts() IntSpecCounts {
-	sm := IntSpecCounts{}
+// Counts constructs an MassCounts object representing the counts of
+// distinct masses in the receiver IntSpec s.
+func (s IntSpec) Counts() MassCounts {
+	sm := multiset.Multiset{}
 	for _, m := range s {
 		sm[m]++
 	}
-	return sm
+	return MassCounts{sm}
 }
 
 // returns true if peptide p is consistent with spectrum spec.
-// spec is represented as a multiset of masses in the spectrum.
-func (p AAInt) consistent(spec IntSpecCounts) bool {
-	ps := IntSpecCounts{}
+// spec is represented as its counts.
+func (p AAInt) consistent(spec MassCounts) bool {
+	ps := multiset.Multiset{}
 	for i := range p {
 		sum := 0
 		for j := i; j < len(p); j++ {
 			sum += int(p[j])
 			f := ps[sum] + 1
-			if f > spec[sum] {
+			if f > spec.Multiset[sum] {
 				return false
 			}
 			ps[sum] = f
@@ -194,6 +204,10 @@ func (p AAInt) consistent(spec IntSpecCounts) bool {
 
 // SeqCyclicTheo sequences a cyclic peptide from its theoretical integer
 // spectrum.  That is, a spectrum that is correct and complete.
+//
+// Peptides are returned as integer mass sequences, drawn from the set of
+// 18 unique masses of the 20 proteinogenic amino acids.  Returned is a list
+// of all peptides with theoretical spectra consistent with receiver s.
 func (s IntSpec) SeqCyclicTheo() (r []AAInt) {
 	smap := s.Counts()
 	l := []AAInt{{}}
@@ -217,24 +231,18 @@ func (s IntSpec) SeqCyclicTheo() (r []AAInt) {
 	return r
 }
 
-func (p AAInt) score(target IntSpecCounts) (score int) {
-	for m, n := range p.CyclicSpec().Counts() {
-		if t := target[m]; n < t {
-			score += n
-		} else {
-			score += t
-		}
-	}
-	return
+func (pep AAInt) score(spec MassCounts) int {
+	pc := pep.CyclicSpec().Counts()
+	return multiset.IntersectionCardinality(pc.Multiset, spec.Multiset)
 }
 
-func (pl *lbd) cut(target IntSpecCounts, n int) {
+func (pl *lbd) cut(target MassCounts, n int) {
 	l := *pl
 	if len(l) <= n {
 		return
 	}
 	for i, c := range l {
-		l[i].s = c.score(target)
+		l[i].s = c.AAInt.score(target)
 	}
 	sort.Sort(l)
 	ns := l[n].s
@@ -250,7 +258,7 @@ func (pl *lbd) cut(target IntSpecCounts, n int) {
 
 type cand struct {
 	AAInt
-	m int // total mass in AA20Int
+	m int // total mass in AAInt
 	s int // score
 }
 
@@ -260,38 +268,57 @@ func (l lbd) Len() int           { return len(l) }
 func (l lbd) Less(i, j int) bool { return l[i].s > l[j].s }
 func (l lbd) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
 
-// expand grows each peptide in l by appending a single amino acid to the end.
-// it does this for all 18 unique amino acids.  the length of the result list e
-// will be 18 times the length of the argument list l.
-func (pl *lbd) expand() {
-	l := *pl
-	e := lbd{}
+// expand grows each peptide in receiver leaderboard pl by appending a single
+// amino acid mass to the end.  it does this for each amino acid mass in
+// argument set.  the length of the resulting leader board will be the
+// original length times the length of the argument list l.
+func (pl *lbd) expand(set AAInt) {
+	l := *pl   // original leaderboard
+	e := lbd{} // new leaderboard to be populated
 	for _, c := range l {
 		n := len(c.AAInt)
-		p := c.AAInt[:n:n]
-		for _, a := range am18 {
+		p := c.AAInt[:n:n] // copy the peptide
+		for _, a := range set {
 			e = append(e, cand{
 				AAInt: append(p, a),
 				m:     c.m + int(a)})
 		}
 	}
-	*pl = e
+	*pl = e // replace original leaderboard with new expanded leaderboard
 }
 
 // SeqCyclicExp sequences a cyclic peptide from an experimental integer
 // spectrum.  That is, a spectrum with errors and omissions.
-func (s IntSpec) SeqCyclicExp(n int) (r []AAInt) {
+//
+// The amino acid integer mass set used is the 18 unique masses of the 20
+// proteinogenic amino acids.
+//
+// Peptides are returned as integet mass sequences.  Returned is a list of
+// all peptides found with
+func (s IntSpec) SeqCyclic18Exp(n int) []AAInt {
+	return s.leaderboard(n, AA18Int)
+}
+
+func (s IntSpec) SeqCyclicExp(alphabetLen, n int) (r []AAInt) {
+	c := s.Convolve()
+	fmt.Println("c:", c)
+	a := c.cutAA(alphabetLen)
+	fmt.Println("a:", a)
+	return s.leaderboard(n, a)
+}
+
+func (s IntSpec) leaderboard(n int, set AAInt) (r []AAInt) {
 	pm := 0
 	smap := s.Counts()
-	for m := range smap {
-		if m > pm {
+	for m := range smap.Multiset {
+		if m := m.(int); m > pm {
 			pm = m
 		}
 	}
 	l := lbd{{}}
 	max := 0
 	for len(l) > 0 {
-		l.expand()
+		l.expand(set)
 		for i := 0; i < len(l); {
 			c := l[i] // candidate in list
 			switch {
@@ -299,7 +326,7 @@ func (s IntSpec) SeqCyclicExp(n int) (r []AAInt) {
 				i++
 				continue
 			case c.m == pm:
-				switch s := c.score(smap); {
+				switch s := c.AAInt.score(smap); {
 				case s > max:
 					r = []AAInt{c.AAInt}
 					max = s
@@ -318,27 +345,6 @@ func (s IntSpec) SeqCyclicExp(n int) (r []AAInt) {
 	}
 	fmt.Println()
 	return
-}
-
-// Convolve returns the convolution of an integer spectrum.  That is, a list
-// of all pairwise differences.
-func (s IntSpec) Convolve() []int {
-	c := make([]int, (len(s)*(len(s)-1))/2)
-	i := 0
-	for j := 1; j < len(s); j++ {
-		m1 := s[j]
-		for _, m2 := range s[:j] {
-			switch d := m2 - m1; {
-			case d < 0:
-				d = -d
-				fallthrough
-			case d > 0:
-				c[i] = d
-				i++
-			}
-		}
-	}
-	return c[:i]
 }
 
 // AA20MonoisotopicMassTable holds masses in an array that can be indexed
@@ -380,7 +386,10 @@ func init() {
 	AA20MonoisotopicMassTable['Y'-'A'] = 163.06333
 }
 
-const AAHeaviest = 'W' // Tryptophan
+const (
+	AA20Lightest = 'G' // Glycine
+	AA20Heaviest = 'W' // Tryptophan
+)
 
 // aaMass associates an amino acid symbol with a mass in a struct.
 type aaMass struct {
@@ -475,3 +484,54 @@ func (s AA20) PrefixSpectrum() []float64 {
 	}
 	return r
 }
+
+// Convolve returns the convolution of an integer spectrum.
+//
+// The convolution consists of all positive pairwise differences between
+// elements of receiver IntSpec s.  Distinct mass differences are counted
+// and returned as the result.
+func (s IntSpec) Convolve() MassCounts {
+	m := multiset.Multiset{}
+	for _, m1 := range s {
+		for _, m2 := range s {
+			if d := m1 - m2; d > 0 {
+				m[d]++
+			}
+		}
+	}
+	return MassCounts{m}
+}
+
+func (m MassCounts) cutAA(cut int) AAInt {
+	var cand mfc
+	for mass, freq := range m.Multiset {
+		if m := mass.(int); m >= 57 && m <= 200 {
+			cand = append(cand, mf{m, freq})
+		}
+	}
+	if len(cand) < cut {
+		cut = len(cand)
+	} else {
+		sort.Sort(cand)
+		fcut := cand[cut-1].freq
+		for cut < len(cand) && cand[cut].freq == fcut {
+			cut++
+		}
+	}
+	r := make(AAInt, cut)
+	for i, mf := range cand[:cut] {
+		r[i] = uint8(mf.mass)
+	}
+	return r
+}
+
+type mf struct {
+	mass int
+	freq int
+}
+
+type mfc []mf
+
+func (m mfc) Len() int           { return len(m) }
+func (m mfc) Less(i, j int) bool { return m[i].freq > m[j].freq }
+func (m mfc) Swap(i, j int)      { m[i], m[j] = m[j], m[i] }
