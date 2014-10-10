@@ -81,8 +81,9 @@ func AllIndex(s, m []byte) (x []int) {
 		if i < 0 {
 			break
 		}
-		searched += i + 1
-		x = append(x, searched)
+		i += searched
+		x = append(x, i)
+		searched = i + 1
 	}
 	return
 }
@@ -152,9 +153,9 @@ func ModalKmers(k int, s string) (m []string) {
 }
 
 func KmerClumps(k, L, t int, s string) []string {
-	cs := map[string]struct{}{}  // clump set. found clumps.
-	pm := map[string][]int{} // position map. start positions by kmer.
-	w := L - k               // window for start positions
+	cs := map[string]struct{}{} // clump set. found clumps.
+	pm := map[string][]int{}    // position map. start positions by kmer.
+	w := L - k                  // window for start positions
 	for i, j := 0, k; j <= len(s); i, j = i+1, j+1 {
 		kmer := s[i:j]
 		sp := append(pm[kmer], i)

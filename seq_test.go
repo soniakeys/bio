@@ -35,7 +35,7 @@ func ExampleAllIndex() {
 	m := bio.DNA("atat")
 	fmt.Println(bio.AllIndex(s, m))
 	// Output:
-	// [6 8]
+	// [5 7]
 }
 
 func ExampleToUpper() {
