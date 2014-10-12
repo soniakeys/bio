@@ -226,10 +226,11 @@ func HammingAllIndex(d int, m, s []byte) (x []int) {
 
 // HammingCommonMotifs finds a list of motifs of length k that appear within
 // hamming distance d in each string in the list dna.
-func HammingCommonMotifs(dna []string, k, d int) (r []string) {
+func (dna DNA8List) HammingCommonMotifs(k, d int) (r []string) {
 	// collect unique kmers
 	uk := map[string]struct{}{}
-	for _, s := range dna {
+	for _, d := range dna {
+		s := string(d)
 		for i, j := 0, k; j < len(s); i, j = i+1, j+1 {
 			uk[s[i:j]] = struct{}{}
 		}
@@ -240,7 +241,7 @@ func HammingCommonMotifs(dna []string, k, d int) (r []string) {
 	for k1 := range uk {
 		copy(kb, k1)
 		for _, ap := range kb.HammingVariants(d) {
-			v[ap] = struct{}{}
+			v[string(ap)] = struct{}{}
 		}
 	}
 	// test each variant
@@ -257,7 +258,7 @@ l1:
 				if a[i] {
 					continue
 				}
-				if x := strings.Index(s, vv); x >= 0 {
+				if x := bytes.Index(s, vv); x >= 0 {
 					a[i] = true
 					found++
 					if found == len(dna) {

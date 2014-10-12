@@ -1,6 +1,7 @@
 package bio_test
 
 import (
+	"bytes"
 	"fmt"
 
 	"github.com/soniakeys/bio"
@@ -18,6 +19,20 @@ func ExampleDNA8_BaseFreq() {
 	// c 1
 	// t 2
 	// g 1
+}
+
+func ExampleDNA_BaseFreq() {
+	s := bio.DNA("Arithmetic")
+	a, c, t, g := s.BaseFreq()
+	fmt.Println("a", a)
+	fmt.Println("c", c)
+	fmt.Println("t", t)
+	fmt.Println("g", g)
+	// Output:
+	// a 1
+	// c 1
+	// t 2
+	// g 0
 }
 
 func ExampleDNA_Transcribe() {
@@ -61,7 +76,40 @@ func ExampleDNA8_GCContent() {
 	// 0.667
 }
 
-func ExampleDNAProfileMatrix() {
+func ExampleDNA_GCContent() {
+	s := bio.DNA("carrot")
+	fmt.Printf("%.3f\n", s.GCContent())
+	// Output:
+	// 0.333
+}
+
+func ExampleGCSkew() {
+	fmt.Println(bio.GCSkew('G'))
+	fmt.Println(bio.GCSkew('c'))
+	fmt.Println(bio.GCSkew('t'))
+	// Output:
+	// 1
+	// -1
+	// 0
+}
+
+func ExampleDNA8_MinGCSkew() {
+	s := bio.DNA8("accagtgct")
+	m := s.MinGCSkew()
+	fmt.Println(m)
+	w := bytes.Repeat([]byte{' '}, len(s))
+	for _, x := range m {
+		w[x] = '^'
+	}
+	fmt.Printf("|%s|\n", s)
+	fmt.Printf("|%s|\n", w)
+	// Output:
+	// [2 3]
+	// |accagtgct|
+	// |  ^^     |
+}
+
+func ExampleCountProfile() {
 	set := []string{
 		"GAT..ca",
 		"AA##cgg",
@@ -69,7 +117,7 @@ func ExampleDNAProfileMatrix() {
 		"Gxxxaca",
 		"GATmaca",
 	}
-	pm := make(bio.DNAProfileMatrix, len(set[0]))
+	pm := make(bio.CountProfile, len(set[0]))
 	for _, s := range set {
 		pm.Add(bio.DNA(s))
 	}
@@ -91,15 +139,15 @@ func ExampleDNAConsensus() {
 	// GAT-ACA 20
 }
 
-func ExampleDNA8Consensus() {
-	c := []bio.DNA8{
+func ExampleDNA8List_Consensus() {
+	c := bio.DNA8List{
 		bio.DNA8("GATTcca"),
 		bio.DNA8("AATTcgg"),
 		bio.DNA8("GACTaca"),
 		bio.DNA8("GATAaca"),
 		bio.DNA8("GATTaca"),
 	}
-	fmt.Println(bio.DNA8Consensus(c))
+	fmt.Println(c.Consensus())
 	// Output:
 	// GATTACA 28
 }
@@ -113,4 +161,85 @@ func ExampleDNA8_PalFindAllIndex() {
 	// 3: TGCA
 	// 2: ATGCAT
 	// 5: CATG
+}
+
+func ExampleDNA8_HammingVariants() {
+	for _, v := range bio.DNA8("Act").HammingVariants(1) {
+		fmt.Println(v)
+	}
+	// Output:
+	// Act
+	// Cct
+	// Tct
+	// Gct
+	// Aat
+	// Att
+	// Agt
+	// Aca
+	// Acc
+	// Acg
+}
+
+func ExampleDNA8_ModalHammingKmers() {
+	s := bio.DNA8("aacaagcataaacattaaagag")
+	for _, k := range s.ModalHammingKmers(5, 1) {
+		fmt.Println(k)
+	}
+	// Output:
+	// aaaaa
+}
+
+func ExampleDNA8_ModalHammingKmersRC() {
+	s := bio.DNA8("aacaagcataaacattaaagag")
+	for _, k := range s.ModalHammingKmersRC(5, 1) {
+		fmt.Println(k)
+	}
+	// Output:
+	// cttaa
+	// ttaaa
+	// tttaa
+	// ttaag
+	// aaaaa
+	// ttttt
+}
+
+func ExampleDNA8_AAFindAllIndex() {
+	s := bio.DNA8("gtgaaactttttccttggtttaatcaatat")
+	p := bio.AA20("NQ")
+	x := s.AAFindAllIndex(p)
+	fmt.Println(x)
+
+	y := x[0]
+	m := s[y : y+len(p)*3]
+	fmt.Println(m)
+	t, _ := m.Translate()
+	fmt.Println(t)
+	// Output:
+	// [21]
+	// aatcaa
+	// NQ
+}
+
+func ExampleDNA8_AAFindAllIndexRC() {
+	s := bio.DNA8("gtgaaactttttccttggtttaatcaatat")
+	p := bio.AA20("NQ")
+	x := s.AAFindAllIndexRC(p)
+	fmt.Println(x)
+
+	y := x[0]
+	fmt.Println(s[y : y+len(p)*3])
+	y = x[1]
+	fmt.Println(s[y : y+len(p)*3])
+	// Output:
+	// [21 14]
+	// aatcaa
+	// ttggtt
+}
+
+func ExampleDNA8_Hamming() {
+	s1 := bio.DNA8("CATTAG")
+	s2 := bio.DNA8("catagg")
+	fmt.Println(s1.Hamming(s2))
+	// Output:
+	// 2
 }
