@@ -72,17 +72,56 @@ func (s DNA8) Transcribe() RNA8 {
 	return RNA8(transcribe(s))
 }
 
-// DNAComplement returns the complement of a DNA symbol.  It complements
-// DNA base symbols, preserving case.  If the symbol is not a DNA symbol,
+var iupacDNAComp [256]byte
+
+func init() {
+	iupacDNAComp = [256]byte{
+		'G': 'C',
+		'T': 'A',
+		'A': 'T',
+		'C': 'G',
+		'R': 'Y',
+		'Y': 'R',
+		'S': 'S',
+		'W': 'W',
+		'K': 'M',
+		'M': 'K',
+		'D': 'H',
+		'H': 'D',
+		'B': 'V',
+		'V': 'B',
+		'N': 'N',
+		'g': 'c',
+		't': 'a',
+		'a': 't',
+		'c': 'g',
+		'r': 'y',
+		'y': 'r',
+		's': 's',
+		'w': 'w',
+		'k': 'm',
+		'm': 'k',
+		'd': 'h',
+		'h': 'd',
+		'b': 'v',
+		'v': 'b',
+		'n': 'n',
+	}
+	for i, b := range iupacDNAComp {
+		if b == 0 {
+			iupacDNAComp[i] = byte(i)
+		}
+	}
+}
+
+// DNAComplement returns the complement of a DNA symbol.
+//
+// DNAComplement complements all IUPAC DNA symbols, including ambiguity symbols.
+// It allows lower case versions IUPAC symbols and returns the complement
+// with case preserved.  If the symbol is not an IUPAC DNA symbol,
 // it is returned unchanged.
 func DNAComplement(b byte) byte {
-	switch b | LCBit {
-	case 'a', 't':
-		return b ^ 0x15
-	case 'c', 'g':
-		return b ^ 0x04
-	}
-	return b
+	return iupacDNAComp[b]
 }
 
 // DNA8Complement returns the complement of a DNA8 symbol preserving case.

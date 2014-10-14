@@ -1,11 +1,50 @@
 package bio_test
 
 import (
+"testing"
 	"bytes"
 	"fmt"
+	"math/rand"
 
 	"github.com/soniakeys/bio"
 )
+
+var d1k90 []byte
+var d1k100 []byte
+func init() {
+	d1k90 = make([]byte, 1000)
+	d1k100 = make([]byte, 1000)
+	// make 90% dna
+	for i := range d1k90 {
+		if rand.Intn(10) == 0 {
+			d1k90[i] = byte(rand.Intn(256))
+		} else {
+			d1k90[i] = "actg"[rand.Intn(4)]
+		}
+	}
+	// make 100% dna
+	for i := range d1k100 {
+		d1k100[i] = "actg"[rand.Intn(4)]
+	}
+}
+
+func BenchmarkDNAComplement90(b *testing.B) {
+	for i := 0; i <= b.N; i++ {
+		bio.DNAComplement(d1k90[i%1000])
+	}
+}
+
+func BenchmarkDNAComplement100(b *testing.B) {
+	for i := 0; i <= b.N; i++ {
+		bio.DNAComplement(d1k100[i%1000])
+	}
+}
+
+func BenchmarkDNA8Complement100(b *testing.B) {
+	for i := 0; i <= b.N; i++ {
+		bio.DNA8Complement(d1k100[i%1000])
+	}
+}
 
 func ExampleDNA8_BaseFreq() {
 	s := bio.DNA8("Gattaca")
@@ -59,7 +98,7 @@ func ExampleDNA_ReverseComplement() {
 	s := bio.DNA("Atacama")
 	fmt.Println(s.ReverseComplement())
 	// Output:
-	// tmtgtaT
+	// tktgtaT
 }
 
 func ExampleDNA8_ReverseComplement() {
