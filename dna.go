@@ -304,7 +304,7 @@ func (s DNA8) Hamming(t DNA8) (d int) {
 
 // MotifSeqDist returns the minimum hamming distance from motif m
 // to any same length kmer in sequence s.
-func (m DNA8) MotifSeqDistance(s DNA8) int {
+func (m DNA8) MotifSeqDist(s DNA8) int {
 	min := len(m)
 	for i, j := 0, len(m); j < len(s); i, j = i+1, j+1 {
 		if h := m.Hamming(s[i:j]); h < min {
@@ -323,7 +323,7 @@ func (m DNA8) MotifSeqDistance(s DNA8) int {
 func (m DNA8) MotifSetDist(l []DNA8) int {
 	d := 0
 	for _, s := range l {
-		d += m.MotifSeqDistance(s)
+		d += m.MotifSeqDist(s)
 	}
 	return d
 }
@@ -348,48 +348,66 @@ func (m DNA8) KmersNearestMotif(s DNA8) (k []DNA8) {
 // kmers.  The symbol order is ACTG.  A string of all Gs rolls over to
 // all As.
 func (m DNA8) Inc() {
-	for i, b := range m {
+	for i := len(m) - 1; i >= 0; i-- {
+		b := m[i]
 		if n := b & 6; n < 6 {
-			m[i] = "C T G"[n] | b&32
+			m[i] = "C T G"[n] | b&LCBit
 			return
 		}
-		m[i] = 'A' | b&32
+		m[i] = 'A' | b&LCBit
 	}
 }
 
-// TTRatio compultes the translation to transversion ratio of two
+// TTRatio compultes the transition to transversion ratio of two
 // DNA strings.
 //
-// The strings must be of equal length.
+// Non-DNA symbols are ignored.
 //
-// Non-DNA symbols are ignored, but the function returns false
+// The strings must be of equal length.  Panic or nonsense result
 // if the strings are of unequal length.
-func TTRatio(s, t DNA) (float64, bool) {
-	if len(t) != len(s) {
-		return 0, false
-	}
-	var ts, tv int
-	for i, si := range s {
-		switch ti := t[i]; ti {
-		case si:
+func TiTvRatio(s, t DNA) float64 {
+	var ti, tv int
+	for i, s1 := range s {
+		s1 |= LCBit
+		switch t1 := t[i] | LCBit; t1 {
+		case s1:
 			continue
-		case 'A', 'G':
-			switch si {
-			case 'A', 'G':
-				ts++
-			case 'C', 'T':
+		case 'a', 'g':
+			switch s1 {
+			case 'a', 'g':
+				ti++
+			case 'c', 't':
 				tv++
 			}
-		case 'C', 'T':
-			switch si {
-			case 'C', 'T':
-				ts++
-			case 'A', 'G':
+		case 'c', 't':
+			switch s1 {
+			case 'c', 't':
+				ti++
+			case 'a', 'g':
 				tv++
 			}
 		}
 	}
-	return float64(ts) / float64(tv), true
+	return float64(ti) / float64(tv)
+}
+
+// TTRatio compultes the transition to transversion ratio of two
+// DNA8 strings.
+//
+// The strings must be of equal length.  Panic or nonsense result
+// if the strings are of unequal length or if non-DNA8 symbols are present.
+func TiTvRatio8(s, t DNA8) float64 {
+	var ti, tv int
+	for i, s1 := range s {
+		s1 &= 6
+		switch t1 := t[i] & 6; {
+		case s1+t1 == 6:
+			ti++
+		case s1 != t1:
+			tv++
+		}
+	}
+	return float64(ti) / float64(tv)
 }
 
 // PalIndex is a return type for FindPalAllIndex.

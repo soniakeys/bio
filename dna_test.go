@@ -243,3 +243,65 @@ func ExampleDNA8_Hamming() {
 	// Output:
 	// 2
 }
+
+func ExampleDNA8_MotifSeqDist() {
+	m := bio.DNA8("caa")
+	s := bio.DNA8("gtgaaactt")
+	fmt.Println(m.MotifSeqDist(s))
+	// Output:
+	// 1
+}
+
+func ExampleDNA8_MotifSetDist() {
+	m := bio.DNA8("caa")
+	l := []bio.DNA8{
+		bio.DNA8("gtgaaactt"),
+		bio.DNA8("gtgagactt"),
+	}
+	fmt.Println(m.MotifSetDist(l))
+	// Output:
+	// 3
+}
+
+func ExampleDNA8_KmersNearestMotif() {
+	m := bio.DNA8("caa")
+	s := bio.DNA8("gtgaaactt")
+	for _, k := range m.KmersNearestMotif(s) {
+		fmt.Println(k)
+	}
+	// Output:
+	// gaa
+	// aaa
+}
+
+func ExampleDNA8_Inc() {
+	m := bio.DNA8("ggt")
+	fmt.Println(m)
+	m.Inc()
+	fmt.Println(m)
+	m.Inc()
+	fmt.Println(m)
+	m.Inc()
+	fmt.Println(m)
+	// Output:
+	// ggt
+	// ggg
+	// aaa
+	// aac
+}
+
+func ExampleTiTvRatio() {
+	s := bio.DNA("gggcttt")
+	t := bio.DNA("Atacama")
+	fmt.Printf("%.3f\n", bio.TiTvRatio(s, t))
+	// Output:
+	// 0.667
+}
+
+func ExampleTiTvRatio8() {
+	s := bio.DNA8("gggcttt")
+	t := bio.DNA8("Atacata")
+	fmt.Printf("%.3f\n", bio.TiTvRatio8(s, t))
+	// Output:
+	// 0.667
+}
