@@ -234,18 +234,24 @@ func commonCounts(spec IntSpec, specCounts MassCounts) int {
 	return multiset.IntersectionCardinality(spec.Counts().Multiset, specCounts.Multiset)
 }
 
-// SeqCyclicExp sequences a cyclic peptide from an experimental integer
+// SeqCyclic18Exp sequences a cyclic peptide from an experimental integer
 // spectrum.  That is, a spectrum with errors and omissions.
 //
 // The amino acid integer mass set used is the 18 unique masses of the 20
 // proteinogenic amino acids.
 //
-// Peptides are returned as integet mass sequences.  Returned is a list of
-// all peptides found with
+// Argument n is a kind of a search width.  Small numbers may miss solutions.
+// Large numbers waste time.  Try a number on the order of the parent mass.
+//
+// Peptides are returned as integer mass sequences.
+// Returned peptides will have mass matching the parent mass of s, and be those
+// with spectra best matching s.  All peptides "tied" for the best match are
+// returned.
 func (s IntSpec) SeqCyclic18Exp(n int) []AAInt {
 	return s.leaderboard(n, 1, AA18Int)
 }
 
+/*
 func (s IntSpec) SeqCyclic200Exp(n int) []AAInt {
 	var a AAInt
 	for i := uint8(57); i <= 200; i++ {
@@ -253,7 +259,25 @@ func (s IntSpec) SeqCyclic200Exp(n int) []AAInt {
 	}
 	return s.leaderboard(n, 1, a)
 }
+*/
 
+// SeqCyclicExp sequences a cyclic peptide from an experimental integer
+// spectrum.  That is, a spectrum with errors and omissions.
+//
+// The amino acid integer masses are not restricted to those of the 20
+// proteinogenic amino acids.  The mass set is picked with a convolution
+// technique.
+//
+// Argument n is a kind of a search width.  Small numbers may miss solutions.
+// Large numbers waste time.  Try a number on the order of the parent mass.
+//
+// Peptides are returned as integer mass sequences.
+// Returned peptides will have mass matching the parent mass of s, and be those
+// with spectra best matching s.
+//
+// Argument nr is a target number of results to return.  If more than nr
+// peptides are found matching the parent mass, nr are returned plus any
+// that are "tying" for last place.
 func (s IntSpec) SeqCyclicExp(alphabetLen, n, nr int) (r []AAInt) {
 	c := s.Convolve()
 	a := c.cutAA(alphabetLen)

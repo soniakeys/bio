@@ -3,8 +3,6 @@
 
 package bio
 
-import "regexp"
-
 // dna.go
 //
 // Types and methods that are specific to DNA or optimized for DNA.
@@ -302,6 +300,37 @@ func (s DNA8) ModalHammingKmersRC(k, h int) (m []DNA8) {
 	return
 }
 
+// Find indexes in s where s translates to pep.  Searches all three
+// reading frames and finds overlaps but does not search reverse complement.
+func (s DNA8) aaFindAllIndex(pep AA20) (r []int) {
+	t := make(AA20, len(s)/3)
+	for f := 0; f < 3; f++ {
+		t = t[:(len(s)-f)/3]
+		for i, j := f, 0; j < len(t); i, j = i+3, j+1 {
+			t[j] = TranslateCodon(s[i], s[i+1], s[i+2])
+		}
+		x := AllIndex(t, pep)
+		for i, p := range x {
+			x[i] = f + p*3
+		}
+		r = append(r, x...)
+	}
+	return
+}
+
+// Find indexes in s where s or reverse complement of s translates to pep.
+// Searches all six reading frames, finds overlaps.  Returns 0-based indexes
+// from the start of s.
+func (s DNA8) AAFindAllIndex(pep AA20) []int {
+	f := s.AAFindAllIndex(pep)
+	r := s.ReverseComplement().aaFindAllIndex(pep)
+	for i, p := range r {
+		r[i] = len(s) - p - len(pep)*3
+	}
+	return append(f, r...)
+}
+
+/* it was a little faster, but worth the extra code? i dunno
 func (s DNA8) AAFindAllIndex3(pep AA20) (r []int) {
 	if len(s) < 3 {
 		return
@@ -350,24 +379,16 @@ func (s DNA8) AAFindAllIndex3(pep AA20) (r []int) {
 	return append(x0, append(x1, x2...)...)
 }
 
-// Find indexes in s where s translates to pep.  Searches all three
-// reading frames and finds overlaps but does not search reverse complement.
-func (s DNA8) AAFindAllIndex(pep AA20) (r []int) {
-	t := make(AA20, len(s)/3)
-	for f := 0; f < 3; f++ {
-		t = t[:(len(s)-f)/3]
-		for i, j := f, 0; j < len(t); i, j = i+3, j+1 {
-			t[j] = TranslateCodon(s[i], s[i+1], s[i+2])
-		}
-		x := AllIndex(t, pep)
-		for i, p := range x {
-			x[i] = f + p*3
-		}
-		r = append(r, x...)
+func (s DNA8) AAFindAllIndex3RC(pep AA20) []int {
+	f := s.AAFindAllIndex3(pep)
+	r := s.ReverseComplement().AAFindAllIndex3(pep)
+	for i, p := range r {
+		r[i] = len(s) - p - len(pep)*3
 	}
-	return
+	return append(f, r...)
 }
-
+*/
+/* interesting, but not as fast
 func (s DNA8) AAFindAllIndexRCRx(pep AA20) (r []int) {
 	var pat, rcPat string
 	for _, aa := range pep {
@@ -387,27 +408,7 @@ func (s DNA8) AAFindAllIndexRCRx(pep AA20) (r []int) {
 	}
 	return r
 }
-
-func (s DNA8) AAFindAllIndex3RC(pep AA20) []int {
-	f := s.AAFindAllIndex3(pep)
-	r := s.ReverseComplement().AAFindAllIndex3(pep)
-	for i, p := range r {
-		r[i] = len(s) - p - len(pep)*3
-	}
-	return append(f, r...)
-}
-
-// Find indexes in s where s or reverse complement of s translates to pep.
-// Searches all six reading frames, finds overlaps.  Returns 0-based indexes
-// from the start of s.
-func (s DNA8) AAFindAllIndexRC(pep AA20) []int {
-	f := s.AAFindAllIndex(pep)
-	r := s.ReverseComplement().AAFindAllIndex(pep)
-	for i, p := range r {
-		r[i] = len(s) - p - len(pep)*3
-	}
-	return append(f, r...)
-}
+*/
 
 // Hamming returns hamming distance between s and t.  Nonsense or panic
 // results if strings are unequal length.

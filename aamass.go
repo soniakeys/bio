@@ -144,9 +144,12 @@ func (a AA20) sum(addWater bool) (s float64) {
 	return a[:half].sum(addWater) + a[half:].sum(false)
 }
 
+// AAMass represents an amino acid sequence as a sequence of the masses of
+// the individual amino acids.
 type AAMass []float64
 
-func (p AA20) Mass() AAMass {
+// MonoisotopicMass returns receiver p as a sequences of masses.
+func (p AA20) MonoisotopicMass() AAMass {
 	m := make(AAMass, len(p))
 	for i, a := range p {
 		m[i] = AA20MonoisotopicMass(a)
@@ -154,6 +157,8 @@ func (p AA20) Mass() AAMass {
 	return m
 }
 
+// LinearSpec synthesizes the theoretical monoisotopic spectrum for
+// a linear peptide.
 func (p AAMass) LinearSpec() MassSpec {
 	s := make(MassSpec, NumSubPepLinear(len(p)))
 	i := 1
@@ -169,6 +174,8 @@ func (p AAMass) LinearSpec() MassSpec {
 	return s
 }
 
+// CyclicSpec synthesizes the theoretical monoisotopic spectrum for
+// a cyclic peptide.
 func (p AAMass) CyclicSpec() MassSpec {
 	// TODO improve efficiency
 	sum := 0.
@@ -187,34 +194,42 @@ func (p AAMass) CyclicSpec() MassSpec {
 
 // PrefixSpectrum returns a monoisotopic spectrum of all prefixes of the
 // amino acid string.
-func (s AA20) PrefixSpectrum() []float64 {
-	r := make([]float64, len(s)+1)
+func (s AA20) PrefixSpectrum() MassSpec {
+	r := make(MassSpec, len(s)+1)
 	for i, aa := range s {
 		r[i+1] = r[i] + AA20MonoisotopicMass(aa)
 	}
 	return r
 }
 
+// MassSpec represents a mass spectrum.  Generally the values are sorted
+// and the last value represents a parent mass.
 type MassSpec []float64
 
-func (s MassSpec) NearestMass(m float64) (i int, d float64) {
-	i = sort.Search(len(s), func(i int) bool { return s[i] >= m })
+// NearestFloat64 finds the element of s nearest x.
+//
+// Slice s must be sorted in increasing order.
+//
+// Retuned is the index into s of the nearest value and the absolute value
+// of the difference between x and the nearest value.
+func NearestFloat64(s []float64, x float64) (i int, d float64) {
+	i = sort.Search(len(s), func(i int) bool { return s[i] >= x })
 	switch i {
 	case 0:
 	case len(s):
 		i--
 	default:
-		di := s[i] - m
-		dLess := m - s[i-1]
+		di := s[i] - x
+		dLess := x - s[i-1]
 		if dLess < di {
 			i--
 		}
 	}
-	return i, math.Abs(m - s[i])
+	return i, math.Abs(x - s[i])
 }
 
-// Score is number of masses in theo within .3 of a mass in measured
-func (meas MassSpec) Score(theo MassSpec) int {
+// score is number of masses in theo within .3 of a mass in measured
+func (meas MassSpec) score(theo MassSpec) int {
 	fmt.Println("theo:", theo)
 	c := 0
 	lastTm := 0.
@@ -226,7 +241,7 @@ func (meas MassSpec) Score(theo MassSpec) int {
 			}
 			continue
 		}
-		_, d := meas.NearestMass(tm)
+		_, d := NearestFloat64(meas, tm)
 		fmt.Print(tm, " within ", d)
 		lastTm = tm
 		lastMatch = d <= .3
@@ -241,11 +256,27 @@ func (meas MassSpec) Score(theo MassSpec) int {
 	return c
 }
 
-func (s MassSpec) SeqCyclic20() []MassCand {
-	return s.leaderboard(1000, 1)
+// SeqCyclic20 sequences a cyclic peptide from an experimental spectrum.
+//
+// The amino acid mass set used is the monoisotopic masses of the 20
+// proteinogenic amino acids.
+//
+// Argument n is a kind of a search width.  Small numbers may miss solutions.
+// Large numbers waste time.  Try a number on the order of the parent mass.
+//
+// Returned peptides will have mass matching the parent mass of s, and be those
+// with spectra best matching s.  All peptides "tied" for the best match are
+// returned.
+func (s MassSpec) SeqCyclic20(n int) []AA20 {
+	l := s.leaderboard(n, 1)
+	r := make([]AA20, len(l))
+	for i, c := range l {
+		r[i] = c.AA20
+	}
+	return r
 }
 
-func (s MassSpec) leaderboard(n, nr int) []MassCand {
+func (s MassSpec) leaderboard(n, nr int) []massCand {
 	sort.Float64s(s)
 	pm := s[len(s)-1] // parent mass
 	// leaderboard, initialized with 0-peptide
@@ -260,7 +291,7 @@ func (s MassSpec) leaderboard(n, nr int) []MassCand {
 				i++
 				continue // candidate remains in the running
 			case math.Abs(pm-c.Mass) <= .3:
-				c.Score = s.Score(c.AAMass.CyclicSpec()) // final Score
+				c.Score = s.score(c.AAMass.CyclicSpec()) // final Score
 				done = append(done, c)
 			}
 			// c.m >= pm: remove from leaderboard
@@ -270,7 +301,7 @@ func (s MassSpec) leaderboard(n, nr int) []MassCand {
 		}
 		if n < len(l) {
 			for i, c := range l {
-				l[i].Score = s.Score(c.AAMass.LinearSpec())
+				l[i].Score = s.score(c.AAMass.LinearSpec())
 			}
 			l = l[:Cut(l, n)]
 		}
@@ -279,14 +310,14 @@ func (s MassSpec) leaderboard(n, nr int) []MassCand {
 	return done[:nr]
 }
 
-type MassCand struct {
+type massCand struct {
 	AA20
 	AAMass
 	Mass  float64 // total mass in AA20
 	Score int     // Score
 }
 
-type massLbd []MassCand
+type massLbd []massCand
 
 func (l massLbd) Len() int           { return len(l) }
 func (l massLbd) Less(i, j int) bool { return l[i].Score > l[j].Score }
@@ -301,7 +332,7 @@ func (pl *massLbd) expand20() {
 		pepM := c.AAMass[:n:n]
 		for _, a := range AA20Alphabet {
 			m := AA20MonoisotopicMass(a)
-			e = append(e, MassCand{
+			e = append(e, massCand{
 				AA20:   append(pep, a),
 				AAMass: append(pepM, m),
 				Mass:   c.Mass + m})
