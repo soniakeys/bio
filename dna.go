@@ -3,6 +3,8 @@
 
 package bio
 
+import "regexp"
+
 // dna.go
 //
 // Types and methods that are specific to DNA or optimized for DNA.
@@ -300,6 +302,54 @@ func (s DNA8) ModalHammingKmersRC(k, h int) (m []DNA8) {
 	return
 }
 
+func (s DNA8) AAFindAllIndex3(pep AA20) (r []int) {
+	if len(s) < 3 {
+		return
+	}
+	lt := (len(s) + 2) / 3
+	t0 := make(AA20, lt*3)
+	t2 := t0[2*lt:]
+	t1 := t0[lt : 2*lt]
+	t0 = t0[:lt]
+	cx := s[0]&6<<1 | s[1]&6>>1
+	i := 2
+	for tx := 0; ; tx++ {
+		cx = cx<<2 | s[i]&6>>1
+		t0[tx] = CodonTable[cx&63]
+		i++
+		if i == len(s) {
+			break
+		}
+
+		cx = cx<<2 | s[i]&6>>1
+		t1[tx] = CodonTable[cx&63]
+		i++
+		if i == len(s) {
+			break
+		}
+
+		cx = cx<<2 | s[i]&6>>1
+		t2[tx] = CodonTable[cx&63]
+		i++
+		if i == len(s) {
+			break
+		}
+	}
+	x0 := AllIndex(t0, pep)
+	for i, p := range x0 {
+		x0[i] = p * 3
+	}
+	x1 := AllIndex(t1, pep)
+	for i, p := range x1 {
+		x1[i] = p*3 + 1
+	}
+	x2 := AllIndex(t2, pep)
+	for i, p := range x2 {
+		x2[i] = p*3 + 2
+	}
+	return append(x0, append(x1, x2...)...)
+}
+
 // Find indexes in s where s translates to pep.  Searches all three
 // reading frames and finds overlaps but does not search reverse complement.
 func (s DNA8) AAFindAllIndex(pep AA20) (r []int) {
@@ -316,6 +366,35 @@ func (s DNA8) AAFindAllIndex(pep AA20) (r []int) {
 		r = append(r, x...)
 	}
 	return
+}
+
+func (s DNA8) AAFindAllIndexRCRx(pep AA20) (r []int) {
+	var pat, rcPat string
+	for _, aa := range pep {
+		pat += codonInvRx[aa]
+		rcPat = codonInvRCRx[aa] + rcPat
+	}
+	pat = "(" + pat + ")|(" + rcPat + ")"
+	rx := regexp.MustCompile(pat)
+	for searched := 0; ; {
+		p := rx.FindIndex(s[searched:])
+		if p == nil {
+			break
+		}
+		x := searched + p[0]
+		r = append(r, x)
+		searched = x + 1
+	}
+	return r
+}
+
+func (s DNA8) AAFindAllIndex3RC(pep AA20) []int {
+	f := s.AAFindAllIndex3(pep)
+	r := s.ReverseComplement().AAFindAllIndex3(pep)
+	for i, p := range r {
+		r[i] = len(s) - p - len(pep)*3
+	}
+	return append(f, r...)
 }
 
 // Find indexes in s where s or reverse complement of s translates to pep.

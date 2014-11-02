@@ -1,16 +1,17 @@
 package bio_test
 
 import (
-"testing"
 	"bytes"
 	"fmt"
 	"math/rand"
+	"testing"
 
 	"github.com/soniakeys/bio"
 )
 
 var d1k90 []byte
 var d1k100 []byte
+
 func init() {
 	d1k90 = make([]byte, 1000)
 	d1k100 = make([]byte, 1000)
