@@ -250,23 +250,6 @@ func ExampleDNA8_AAFindAllIndex() {
 	fmt.Println(x)
 
 	y := x[0]
-	m := s[y : y+len(p)*3]
-	fmt.Println(m)
-	t, _ := m.Translate()
-	fmt.Println(t)
-	// Output:
-	// [21]
-	// aatcaa
-	// NQ
-}
-
-func ExampleDNA8_AAFindAllIndexRC() {
-	s := bio.DNA8("gtgaaactttttccttggtttaatcaatat")
-	p := bio.AA20("NQ")
-	x := s.AAFindAllIndexRC(p)
-	fmt.Println(x)
-
-	y := x[0]
 	fmt.Println(s[y : y+len(p)*3])
 	y = x[1]
 	fmt.Println(s[y : y+len(p)*3])
@@ -287,18 +270,18 @@ func ExampleDNA8_Hamming() {
 func ExampleDNA8_MotifSeqDist() {
 	m := bio.DNA8("caa")
 	s := bio.DNA8("gtgaaactt")
-	fmt.Println(m.MotifSeqDist(s))
+	fmt.Println(s.MotifHamming(m))
 	// Output:
 	// 1
 }
 
 func ExampleDNA8_MotifSetDist() {
 	m := bio.DNA8("caa")
-	l := []bio.DNA8{
+	l := bio.DNA8List{
 		bio.DNA8("gtgaaactt"),
 		bio.DNA8("gtgagactt"),
 	}
-	fmt.Println(m.MotifSetDist(l))
+	fmt.Println(l.MotifHamming(m))
 	// Output:
 	// 3
 }

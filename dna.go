@@ -322,7 +322,7 @@ func (s DNA8) aaFindAllIndex(pep AA20) (r []int) {
 // Searches all six reading frames, finds overlaps.  Returns 0-based indexes
 // from the start of s.
 func (s DNA8) AAFindAllIndex(pep AA20) []int {
-	f := s.AAFindAllIndex(pep)
+	f := s.aaFindAllIndex(pep)
 	r := s.ReverseComplement().aaFindAllIndex(pep)
 	for i, p := range r {
 		r[i] = len(s) - p - len(pep)*3
@@ -421,9 +421,9 @@ func (s DNA8) Hamming(t DNA8) (d int) {
 	return
 }
 
-// MotifSeqDist returns the minimum hamming distance from motif m
+// MotifHamming returns the minimum hamming distance from motif m
 // to any same length kmer in sequence s.
-func (m DNA8) MotifSeqDist(s DNA8) int {
+func (s DNA8) MotifHamming(m DNA8) int {
 	min := len(m)
 	for i, j := 0, len(m); j < len(s); i, j = i+1, j+1 {
 		if h := m.Hamming(s[i:j]); h < min {
@@ -433,16 +433,15 @@ func (m DNA8) MotifSeqDist(s DNA8) int {
 	return min
 }
 
-// MotifSetDist is a distance measure from a motif m to a set
-// of strings l.
+// MotifHamming is a distance measure from a motif m to a list of sequences l.
 //
-// (Not a mathematical set, just a list.)
+// It is the sum of distances DNA8.MotifHamming for string in l.
 //
-// It is the sum of distances MotifSeqDist from m to each string in l.
-func (m DNA8) MotifSetDist(l []DNA8) int {
+// Sequences in receiver l may be of different lengths.
+func (l DNA8List) MotifHamming(m DNA8) int {
 	d := 0
 	for _, s := range l {
-		d += m.MotifSeqDist(s)
+		d += s.MotifHamming(m)
 	}
 	return d
 }

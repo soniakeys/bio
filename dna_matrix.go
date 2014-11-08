@@ -11,17 +11,18 @@ import (
 )
 
 // DNA8List is a general purpose list of DNA8 strings.
-//
-// While DNA8List may be be used as a general purpose list, methods on the type
-// generally require a non-empty list of strings all the same length.
-// Methods may panic or return nonsense results on an empty list or a
-// list with unequal length strings.
-// Test with method Uniform where this is important.
 type DNA8List []DNA8
+
+// Kmers is a list of DNA8 strings all the same length.
+//
+// Methods on the type may require a non-empty list.  Panic or nonsense may
+// result from calling methods on an empty list or a list with unequal length
+// strings.  Test with method Uniform where this is important.
+type Kmers []DNA8
 
 // Uniform returns true if receiver list x is is non-empty and contains strings
 // all the same length.
-func (x DNA8List) Uniform() bool {
+func (x Kmers) Uniform() bool {
 	if len(x) == 0 {
 		return false
 	}
@@ -34,15 +35,18 @@ func (x DNA8List) Uniform() bool {
 	return true
 }
 
-// DiffScore is a measure how much difference exists among matrix of uniform
+// ConsensusHamming is the cumulative sum of hamming distances between the
+// kmers in x and a consensus string formed from them.
+//
+// Alternatively described, it is the number of unconserved bases.
+// A base is conserved when it is the modal base in a position.
+// If multimodal, only a single base is considered conserved, others are
+// counted as unconserved.
+//
+// It represents a measure how much difference exists among matrix of uniform
 // length strings.
-//
-// DiffScore returns the number of unconserved bases in receiver list x.
-// A base is conserved when it is the modal base in a position.  If multimodal,
-// only a single base is considered conserved, others are counted as unconserved.
-//
-// Panic or nonsense results on empty x or non-uniform length x.
-func (x DNA8List) DiffScore() (s int) {
+func (x Kmers) ConsensusHamming() (s int) {
+	// algorithm by alternative description, "Score"
 	k := len(x[0])
 	for i := 0; i < k; i++ {
 		var f [7]int
@@ -65,10 +69,8 @@ func (x DNA8List) DiffScore() (s int) {
 // The nominal base order is ACTG.
 type CountProfile [][4]int
 
-// CountProfile builds a CountProfile object from DNA8List x.
-//
-// Panic or nonsense results on empty x or non-uniform length x.
-func (x DNA8List) CountProfile() CountProfile {
+// CountProfile builds a CountProfile object from Kmers x.
+func (x Kmers) CountProfile() CountProfile {
 	// compare to DNA8List.Profile()
 	c := make(CountProfile, len(x[0]))
 	for _, m := range x {
@@ -79,8 +81,8 @@ func (x DNA8List) CountProfile() CountProfile {
 	return c
 }
 
-// Add adds DNA sequence s to the receiver CountProfile p.  Mixed case is allowed.
-// String lengths not equal to the profile matrix length are allowed,
+// Add adds DNA sequence s to the receiver CountProfile p.  Mixed case is
+// allowed.  String lengths not equal to the profile matrix length are allowed,
 // with shortages and excesses ignored.
 // Symbols other than DNA bases are ignored.
 func (p CountProfile) Add(s DNA) {
@@ -126,23 +128,36 @@ func (pm CountProfile) Consensus() (cs DNA, score int) {
 	return
 }
 
-// FracProfile represents a profile matrix corresponding to a set of DNA strings.
+// FracProfile represents a profile matrix corresponding to a list of DNA
+// k-mers.
 //
 // Elements values correspond to the fraction of each base by position.
 // Row order is ACTG.
 type FracProfile [][4]float64
 
 // FracProfile constructs the FracProfile matrix corresponding to receiver
-// DNAList x.
+// Kmers x.
 //
 // In the resulting profile, element values for the four bases will sum to
 // approximately 1.0 for each position.
-//
-// Panic or nonsense results on empty x or non-uniform length x.
-func (x DNA8List) FracProfile() FracProfile {
+func (x Kmers) FracProfile() FracProfile {
 	// compare to DNA8List.BaseCount
 	p := make(FracProfile, len(x[0]))
 	inc := 1 / float64(len(x))
+	for _, m := range x {
+		for i, b := range m {
+			p[i][b>>1&3] += inc
+		}
+	}
+	return p
+}
+
+// LaplaceProfile constructs the profile matrix corresponding to
+// motif matrix m, augmented by Laplace's Rule of Succession.  That is,
+// with a pseudocount of 1 added to each base count.
+func (x Kmers) LaplaceProfile() FracProfile {
+	inc := 1 / float64(len(x)+4)
+	p := NewPseudoProfile(len(x[0]), inc)
 	for _, m := range x {
 		for i, b := range m {
 			p[i][b>>1&3] += inc
@@ -171,19 +186,39 @@ func (p FracProfile) KmerProb(kmer DNA8) float64 {
 	return pr
 }
 
-// Kmer returns the profile-most probable kmers in s.
-func (p FracProfile) Kmer(s DNA8) (k []DNA8) {
+// ProbKmer returns the profile-most probable kmer in s.
+func (p FracProfile) ProbKmer(s DNA8) (k DNA8) {
 	max := 0.
-	for i, j := 0, len(p[0]); j < len(s); i, j = i+1, j+1 {
-		switch pr := p.KmerProb(s[i:j]); {
-		case pr > max:
-			k = []DNA8{s[i:j]}
+	i := 0
+	j := len(p)
+	for j <= len(s) {
+		if pr := p.KmerProb(s[i:j]); pr > max {
+			k = s[i:j]
 			max = pr
-		case pr == max:
-			k = append(k, s[i:j])
 		}
+		i++
+		j++
 	}
 	return
+}
+
+// RandWeighted returns an int >= 0 and < len(weights)
+//
+// The probability of returning a value n is proportional to weight[n].
+func RandWeighted(weights []float64) (n int) {
+	sum := 0.
+	for _, w := range weights {
+		sum += w
+	}
+	f := rand.Float64() * sum
+	c := 0.
+	for v, w := range weights {
+		c += w
+		if c > f {
+			return v
+		}
+	}
+	return len(weights) - 1
 }
 
 func (p FracProfile) RandKmer(s DNA8) DNA8 {
@@ -197,19 +232,19 @@ func (p FracProfile) RandKmer(s DNA8) DNA8 {
 	return s[i : i+k]
 }
 
-func GibbsSampler(l []DNA8, k, N int) (DNA8List, int) {
-	motifs := make(DNA8List, len(l))
+func GibbsSampler(l []DNA8, k, N int) (Kmers, int) {
+	motifs := make(Kmers, len(l))
 	for i, s := range l {
 		j := rand.Intn(len(s) - k + 1)
 		motifs[i] = s[j : j+k]
 	}
 	best := len(l) * k
-	bestMotifs := make(DNA8List, len(l))
+	bestMotifs := make(Kmers, len(l))
 	for i := 0; i < N; i++ {
 		j := rand.Intn(len(l))
 		motifs[j] = motifs[0]
 		motifs[0], motifs[j] = motifs[j], motifs[1:].FracProfile().RandKmer(l[j])
-		if s := motifs.DiffScore(); s < best {
+		if s := motifs.ConsensusHamming(); s < best {
 			best = s
 			copy(bestMotifs, motifs)
 		}
@@ -217,25 +252,25 @@ func GibbsSampler(l []DNA8, k, N int) (DNA8List, int) {
 	return bestMotifs, best
 }
 
-func (p FracProfile) Motifs(l []DNA8) DNA8List {
-	m := make(DNA8List, len(l))
+func (p FracProfile) Motifs(l []DNA8) Kmers {
+	m := make(Kmers, len(l))
 	for i, s := range l {
-		m[i] = p.Kmer(s)[0]
+		m[i] = p.ProbKmer(s)
 	}
 	return m
 }
 
-func RandomMotifSearch(l []DNA8, k int) (DNA8List, int) {
-	motifs := make(DNA8List, len(l))
+func (l DNA8List) RandomMotifSearch(k int) (Kmers, int) {
+	motifs := make(Kmers, len(l))
 	for i, s := range l {
 		j := rand.Intn(len(s) - k + 1)
 		motifs[i] = s[j : j+k]
 	}
-	bestMotifs := make(DNA8List, len(l))
+	bestMotifs := make(Kmers, len(l))
 	best := len(l) * k
 	for {
 		motifs = motifs.LaplaceProfile().Motifs(l)
-		if s := motifs.DiffScore(); s < best {
+		if s := motifs.ConsensusHamming(); s < best {
 			copy(bestMotifs, motifs)
 			best = s
 		} else {
@@ -244,21 +279,7 @@ func RandomMotifSearch(l []DNA8, k int) (DNA8List, int) {
 	}
 }
 
-// LaplaceProfile constructs the profile matrix corresponding to
-// motif matrix m, augmented by Laplace's Rule of Succession.  That is,
-// with a pseudocount of 1 added to each base count.
-func (x DNA8List) LaplaceProfile() FracProfile {
-	inc := 1 / float64(len(x)+4)
-	p := NewPseudoProfile(len(x[0]), inc)
-	for _, m := range x {
-		for i, b := range m {
-			p[b>>1&3][i] += inc
-		}
-	}
-	return p
-}
-
-// Consensus generates a consensus string from receiver DNA8List x.
+// Consensus generates a consensus string from receiver Kmers c.
 //
 // Consensus in each position is simply the most frequent base in that
 // position.  Input sequences should be of the same lengths, but the result
@@ -269,7 +290,7 @@ func (x DNA8List) LaplaceProfile() FracProfile {
 // Score is the sum of occurrences of the consensus base at each position
 // over the sequence.  Maximum possible score is len(c) * len(c[0]), which
 // would happen if all sequences were identical.
-func (c DNA8List) Consensus() (seq DNA8, score int) {
+func (c Kmers) Consensus() (seq DNA8, score int) {
 	s := c[0]
 	r := make(DNA8, len(s))
 	// compute position by position, without constructing profile matrix
@@ -300,7 +321,7 @@ func (c DNA8List) Consensus() (seq DNA8, score int) {
 
 // Entropy computes entropy for a motif matrix.  It is the sum of entropies
 // in each column.
-func (x DNA8List) Entropy() (e float64) {
+func (x Kmers) Entropy() (e float64) {
 	k := len(x[0])
 	inc := 1 / float64(len(x))
 	for i := 0; i < k; i++ {
@@ -317,14 +338,17 @@ func (x DNA8List) Entropy() (e float64) {
 	return
 }
 
-// MedianString returns a list of kmers that are at minimum distance
-// (by the method MotifSetDist) to a list of strings l.
+// Median returns a list of kmers that are at minimum distance
+// (by the method MotifHamming) to a list of strings l.
+//
+// Sequences in receiver l may be of different lengths.
+//
 // The algorithm is brute force and practical only when k is small.
-func MedianString(l []DNA8, k int) (m []DNA8) {
+func (l Kmers) Median(k int) (m Kmers) {
 	z := DNA8(bytes.Repeat([]byte{'A'}, k))
 	min := len(l[0])
 	for p := append(DNA8{}, z...); ; {
-		switch d := p.MotifSetDist(l); {
+		switch d := DNA8List(l).MotifHamming(p); {
 		case d < min:
 			m = []DNA8{append(DNA8{}, p...)}
 			min = d
@@ -341,24 +365,28 @@ func MedianString(l []DNA8, k int) (m []DNA8) {
 }
 
 // MotifSearch uses a greedy algorithm.
-func MotifSearch(l []DNA8, k int) (m []DNA8) {
-	bestMotifs := make(DNA8List, len(l))
+func (l DNA8List) MotifSearch(k int) (m Kmers) {
+	bestMotifs := make(Kmers, len(l))
 	for i, s := range l {
 		bestMotifs[i] = s[:k]
 	}
-	motifs := make(DNA8List, len(l))
+	bestScore := bestMotifs.ConsensusHamming()
+	motifs := make(Kmers, len(l))
 	s0 := l[0]
-	best := len(motifs) * k
-	for i, j := 0, k; j < len(s0); i, j = i+1, j+1 {
+	i := 0
+	j := k
+	for j <= len(s0) {
 		motifs[0] = s0[i:j]
 		for i := 1; i < len(l); i++ {
 			p := motifs[:i].LaplaceProfile()
-			motifs[i] = p.Kmer(l[i])[0]
+			motifs[i] = p.ProbKmer(l[i])
 		}
-		if s := motifs.DiffScore(); s < best {
-			best = s
+		if s := motifs.ConsensusHamming(); s < bestScore {
+			bestScore = s
 			copy(bestMotifs, motifs)
 		}
+		i++
+		j++
 	}
 	return bestMotifs
 }

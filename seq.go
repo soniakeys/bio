@@ -173,30 +173,6 @@ func KmerClumps(k, L, t int, s string) []string {
 	return c
 }
 
-// MotifSeqDist returns the minimum hamming distance from motif m to any
-// same length kmer in string s.
-func MotifSeqDist(m, s []byte) int {
-	min := len(m)
-	for i, j := 0, len(m); j < len(s); i, j = i+1, j+1 {
-		if h := Hamming(m, s[i:j]); h < min {
-			min = h
-		}
-	}
-	return min
-}
-
-// MotifSetDist is a distance measure from a motif m to a set of strings l.
-//
-// (Not a mathematical set, just a list.)
-//
-// It is the sum of distances MotifSeqDist from m to each string in l.
-func MotifSetDist(m []byte, l [][]byte) (d int) {
-	for _, s := range l {
-		d += MotifSeqDist(m, s)
-	}
-	return
-}
-
 // KmersNearestMotif returns the kmers in s having minimum hamming distance
 // from motif m.
 func KmersNearestMotif(m, s []byte) (k [][]byte) {
