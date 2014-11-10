@@ -10,21 +10,54 @@ import (
 	"strings"
 )
 
-// seq.go
+// Seq is a general purpose byte sequence type.
 //
-// Functions general to multiple sequence types.
-//
-// There is no named type for generalized sequences.  []byte seems enough.
-// Functions here are generally case sensitive and should be documented as
-// such, to avoid confusion with the behavior of case insensitive types
+// Bytes in a Seq are generally interpreted as separate symbols.  That is,
+// Seqs do not generally hold multibyte symbols such as UTF-8 runes.
+// Methods are generally case sensitive, in contrast to case insensitive types
 // such as DNA8.
+type Seq []byte
+
+func (s Seq) String() string {
+	return string(s)
+}
 
 const LCBit = 0x20 // Bit mask for ASCII lower case
+
+// ToLower returns a new sequence with ASCII upper case converted to
+// lower case.
+//
+// All other bytes are copied as-is.
+func (s Seq) ToLower() Seq {
+	r := make(Seq, len(s))
+	for i, b := range s {
+		if b >= 'A' && b <= 'Z' {
+			b |= LCBit
+		}
+		r[i] = b
+	}
+	return r
+}
+
+// ToUpper returns a new sequence with ASCII lower case converted to
+// upper case.
+//
+// All other bytes are copied as-is.
+func (s Seq) ToUpper() Seq {
+	r := make(Seq, len(s))
+	for i, b := range s {
+		if b >= 'a' && b <= 'z' {
+			b &^= LCBit
+		}
+		r[i] = b
+	}
+	return r
+}
 
 // Freq counts the frequency of all symbols appearing in a sequence.
 //
 // The returned array contains a count of each symbol appearing in the sequence.
-func Freq(s []byte) *[256]int {
+func (s Seq) Freq() *[256]int {
 	var a [256]int
 	for _, b := range s {
 		a[b]++
@@ -38,7 +71,7 @@ func Freq(s []byte) *[256]int {
 // If a symbol does not appear in the sequence, there will be no map key for it.
 // Upper and lower case are treated as distinct.  If a sequence contains both
 // 'A' and 'a' the result will contain separate counts for the two symbols.
-func FreqMap(s []byte) map[byte]int {
+func (s Seq) FreqMap() map[byte]int {
 	m := map[byte]int{}
 	for _, b := range s {
 		m[b]++
@@ -48,7 +81,7 @@ func FreqMap(s []byte) map[byte]int {
 
 // case insensitive.  used by methods of both DNA8 and RNA8.
 func baseFreq8(s []byte) (a, c, tu, g int) {
-	var n [8]int
+	var n [7]int
 	for _, b := range s {
 		n[b&6]++
 	}
@@ -60,7 +93,7 @@ func baseFreq8(s []byte) (a, c, tu, g int) {
 //
 // Sequences s and t must be of equal length.
 // Panic or nonsense results if the lengths are unequal.
-func Hamming(s, t []byte) int {
+func (s Seq) Hamming(t Seq) int {
 	h := 0
 	for i, b := range s {
 		if b != t[i] {
@@ -75,7 +108,7 @@ func Hamming(s, t []byte) int {
 // Returned is a list of indexes of all occurrences of motif m in sequence s,
 // including overlapping ones.   Comparison is done byte-wise and so is
 // case sensitive.
-func AllIndex(s, m []byte) (x []int) {
+func (s Seq) AllIndex(m Seq) (x []int) {
 	for searched := 0; ; {
 		i := bytes.Index(s[searched:], m)
 		if i < 0 {
@@ -88,52 +121,26 @@ func AllIndex(s, m []byte) (x []int) {
 	return
 }
 
-// ToLower returns a new sequence with ASCII upper case forced to lower case.
-//
-// Non-alphabetic bytes are unaffected.
-func ToLower(s []byte) []byte {
-	r := make([]byte, len(s))
-	for i, b := range s {
-		if b >= 'A' && b <= 'Z' {
-			b |= LCBit
-		}
-		r[i] = b
-	}
-	return r
-}
-
-// ToUpper returns a new sequence with ASCII lower case forced to upper case.
-//
-// Non-alphabetic bytes are unaffected.
-func ToUpper(s []byte) []byte {
-	r := make([]byte, len(s))
-	for i, b := range s {
-		if b >= 'a' && b <= 'z' {
-			b &^= LCBit
-		}
-		r[i] = b
-	}
-	return r
-}
-
-// MotifCount counts all occurrences of a motif in a sequence,
+// AllCount counts all occurrences of a motif in a sequence,
 // including overlaps.
-func MotifCount(m, s []byte) (x int) {
-	for searched := 0; ; searched++ {
+//
+// It is equivalent to len(s.AllIndex(m)).
+func (s Seq) AllCount(m Seq) (x int) {
+	for searched := 0; ; {
 		i := bytes.Index(s[searched:], m)
 		if i < 0 {
 			break
 		}
 		x++
-		searched += i
+		searched += i + 1
 	}
 	return
 }
 
 // ModalKmers returns the most frequent k-mers in a string.
 //
-//	k is the k-mer length
-//	s is the string
+//	k is the k-mer length.
+//	s is the string to search.
 func ModalKmers(k int, s string) (m []string) {
 	f := map[string]int{}
 	max := 0
@@ -175,13 +182,13 @@ func KmerClumps(k, L, t int, s string) []string {
 
 // KmersNearestMotif returns the kmers in s having minimum hamming distance
 // from motif m.
-func KmersNearestMotif(m, s []byte) (k [][]byte) {
+func (s Seq) KmersNearestMotif(m Seq) (k []Seq) {
 	min := len(m)
-	for i, j := 0, len(m); j < len(s); i, j = i+1, j+1 {
-		switch h := Hamming(m, s[i:j]); {
+	for i, j := 0, len(m); j <= len(s); i, j = i+1, j+1 {
+		switch h := m.Hamming(s[i:j]); {
 		case h < min:
 			min = h
-			k = [][]byte{s[i:j]}
+			k = []Seq{s[i:j]}
 		case h == min:
 			k = append(k, s[i:j])
 		}
@@ -191,58 +198,10 @@ func KmersNearestMotif(m, s []byte) (k [][]byte) {
 
 // HammingAllIndex returns indexes of all kmers in s that are within
 // hamming distance d of motif m.
-func HammingAllIndex(d int, m, s []byte) (x []int) {
+func (s Seq) HammingAllIndex(d int, m Seq) (x []int) {
 	for i, j := 0, len(m); j <= len(s); i, j = i+1, j+1 {
-		if h := Hamming(m, s[i:j]); h <= d {
+		if h := m.Hamming(s[i:j]); h <= d {
 			x = append(x, i)
-		}
-	}
-	return
-}
-
-// HammingCommonMotifs finds a list of motifs of length k that appear within
-// hamming distance d in each string in the list dna.
-func (dna DNA8List) HammingCommonMotifs(k, d int) (r []string) {
-	// collect unique kmers
-	uk := map[string]struct{}{}
-	for _, d := range dna {
-		s := string(d)
-		for i, j := 0, k; j < len(s); i, j = i+1, j+1 {
-			uk[s[i:j]] = struct{}{}
-		}
-	}
-	// collect unique variants
-	kb := make(DNA8, k)
-	v := map[string]struct{}{}
-	for k1 := range uk {
-		copy(kb, k1)
-		for _, ap := range kb.HammingVariants(d) {
-			v[string(ap)] = struct{}{}
-		}
-	}
-	// test each variant
-	a := make([]bool, len(dna))
-l1:
-	for ap := range v {
-		for i := range a {
-			a[i] = false
-		}
-		found := 0
-		copy(kb, ap)
-		for _, vv := range kb.HammingVariants(d) {
-			for i, s := range dna {
-				if a[i] {
-					continue
-				}
-				if x := bytes.Index(s, vv); x >= 0 {
-					a[i] = true
-					found++
-					if found == len(dna) {
-						r = append(r, ap)
-						continue l1
-					}
-				}
-			}
 		}
 	}
 	return
@@ -264,7 +223,7 @@ func KmerComposition(k int, s string) []string {
 //
 // The algorithm performs a simple one-time removal. It does not deal with
 //  overlapping matches or matches on the spliced sequences.
-func Splice(seq []byte, intr []string) []byte {
+func (seq Seq) Splice(intr []string) Seq {
 	if len(intr) == 0 {
 		return seq
 	}

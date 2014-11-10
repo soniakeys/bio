@@ -36,7 +36,7 @@ func (s DNA8) String() string {
 //
 // Symbols which are not DNA bases are ignored and not included in any count.
 func (s DNA) BaseFreq() (a, c, t, g int) {
-	f := Freq(s)
+	f := Seq(s).Freq()
 	return f['A'] + f['a'],
 		f['C'] + f['c'],
 		f['T'] + f['t'],
@@ -309,7 +309,7 @@ func (s DNA8) aaFindAllIndex(pep AA20) (r []int) {
 		for i, j := f, 0; j < len(t); i, j = i+3, j+1 {
 			t[j] = TranslateCodon(s[i], s[i+1], s[i+2])
 		}
-		x := AllIndex(t, pep)
+		x := Seq(t).AllIndex(Seq(pep))
 		for i, p := range x {
 			x[i] = f + p*3
 		}

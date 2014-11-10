@@ -2,16 +2,23 @@ package bio_test
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/soniakeys/bio"
 )
 
-func ExampleFreq() {
-	s := bio.DNA("Agatha")
-	h := bio.FreqMap(s)
-	fmt.Println(len(h), "symbols")
-	for _, b := range []byte("Aaght") {
-		fmt.Printf("%c %d\n", b, h[b])
+func ExampleSeq_FreqMap() {
+	s := bio.Seq("Agatha")
+	m := s.FreqMap()
+	fmt.Println(len(m), "symbols")
+	// some hoops because maps are unordered...
+	var i []int
+	for k := range m {
+		i = append(i, int(k))
+	}
+	sort.Ints(i)
+	for _, k := range i {
+		fmt.Printf("%c %d\n", k, m[byte(k)])
 	}
 	// Output:
 	// 5 symbols
@@ -22,32 +29,32 @@ func ExampleFreq() {
 	// t 1
 }
 
-func ExampleHamming() {
-	s := bio.DNA("AGGCTTAC")
-	t := bio.DNA("AGgCTAAC")
-	fmt.Println(bio.Hamming(s, t))
+func ExampleSeq_Hamming() {
+	s := bio.Seq("AGGCTTAC")
+	t := bio.Seq("AGgCTAAC")
+	fmt.Println(s.Hamming(t))
 	// Output:
 	// 2
 }
 
-func ExampleAllIndex() {
-	s := bio.DNA("Atatgatatat")
-	m := bio.DNA("atat")
-	fmt.Println(bio.AllIndex(s, m))
+func ExampleSeq_AllIndex() {
+	s := bio.Seq("Atatgatatat")
+	m := bio.Seq("atat")
+	fmt.Println(s.AllIndex(m))
 	// Output:
 	// [5 7]
 }
 
-func ExampleToUpper() {
-	t := bio.DNA("AGgCT-AC?")
-	fmt.Println(bio.DNA(bio.ToUpper(t)))
+func ExampleSeq_ToUpper() {
+	t := bio.Seq("AGgCT-AC?")
+	fmt.Println(t.ToUpper())
 	// Output:
 	// AGGCT-AC?
 }
 
-func ExampleToLower() {
-	t := bio.DNA("AGgCT-AC?")
-	fmt.Println(bio.DNA(bio.ToLower(t)))
+func ExampleSeq_ToLower() {
+	t := bio.Seq("AGgCT-AC?")
+	fmt.Println(t.ToLower())
 	// Output:
 	// aggct-ac?
 }

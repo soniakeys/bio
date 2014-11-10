@@ -179,8 +179,8 @@ func ExampleDNAConsensus() {
 	// GAT-ACA 20
 }
 
-func ExampleDNA8List_Consensus() {
-	c := bio.DNA8List{
+func ExampleKmers_Consensus() {
+	c := bio.Kmers{
 		bio.DNA8("GATTcca"),
 		bio.DNA8("AATTcgg"),
 		bio.DNA8("GACTaca"),
