@@ -328,7 +328,7 @@ func (p FracProfile) KmerProbability(kmer DNA8) float64 {
 //
 // If string s is shorter than profile p, MostProbKmer returns nil.
 func (p FracProfile) MostProbKmer(s DNA8) (kmer DNA8) {
-	max := 0.
+	max := -1.
 	end := len(s) - len(p)
 	for i := 0; i <= end; i++ {
 		k := s[i : i+len(p)]
