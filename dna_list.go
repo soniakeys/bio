@@ -44,6 +44,10 @@ func (x Kmers) Uniform() bool {
 //                         directly from kmers without constructing profile.
 // Kmers.Entropy,          computes Entropy--"mismatch" sense like hamming
 //                         but better.
+// Kmers.EntropyContributions, individual entropy terms.
+// FracProfile.Entropy
+// FracProfile.CrossEntropy
+// FracProfile.RelativeEntropy
 //
 // Kmers.CountProfile,     constructs and populates from DNA8.
 // CountProfile.Add,       adds a DNA (not DNA8) string.
@@ -207,6 +211,26 @@ func (x Kmers) Entropy() (e float64) {
 	return
 }
 
+// EntropyContributions computes contributions of each base in each position
+// to the total entropy for a motif matrix.
+func (x Kmers) EntropyContributions() [][4]float64 {
+	k := len(x[0])
+	e := make([][4]float64, k)
+	inc := 1 / float64(len(x))
+	for i := range e {
+		var f [4]float64
+		for _, m := range x {
+			f[m[i]>>1&3] += inc
+		}
+		for j, p := range f {
+			if p > 0 {
+				e[i][j] = -p * math.Log2(p)
+			}
+		}
+	}
+	return e
+}
+
 // CountProfile represents base counts by position among a set of
 // DNA strings.
 //
@@ -313,6 +337,60 @@ func newPseudoProfile(k int, p float64) FracProfile {
 		a[i] = p4
 	}
 	return a
+}
+
+// Entropy computes entropy for a FracProfile.  It is the sum of entropies
+// in each column.
+func (p FracProfile) Entropy() (e float64) {
+	for i := range p {
+		for _, pr := range p[i] {
+			if pr > 0 {
+				e -= pr * math.Log2(pr)
+			}
+		}
+	}
+	return
+}
+
+// BaseFreq returns fractional base frequencies in receiver list l.
+//
+// The four elements of the result sum to 1.0.
+func (l DNA8List) BaseFreq() (b [4]float64) {
+	var n [7]int
+	for _, s := range l {
+		for _, b := range s {
+			n[b&6]++
+		}
+	}
+	c := 1 / float64(n[0]+n[2]+n[4]+n[6])
+	for i := range b {
+		b[i] = float64(n[i*2]) * c
+	}
+	return
+}
+
+// CrossEntropy computes cross-entropy for a FracProfile.
+func (p FracProfile) CrossEntropy(log2b [4]float64) (e float64) {
+	for i := range p {
+		for j, pr := range p[i] {
+			if pr > 0 {
+				e -= pr * log2b[j]
+			}
+		}
+	}
+	return
+}
+
+// RelativeEntropy computes cross-entropy for a FracProfile.
+func (p FracProfile) RelativeEntropy(b [4]float64) (e float64) {
+	for i := range p {
+		for j, pr := range p[i] {
+			if pr > 0 {
+				e += pr * math.Log2(pr/b[j])
+			}
+		}
+	}
+	return
 }
 
 // KmerProbability computes the probability of a kmer given profile p.
