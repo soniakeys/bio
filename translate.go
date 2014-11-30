@@ -20,9 +20,7 @@ import (
 // Use the function TranslateCodon though in preference to directly indexing
 // the table.
 var CodonTable [64]byte
-var codonSlice = CodonTable[:]
-var codonBMap = map[[3]byte]byte{}
-var codonSMap = map[string]byte{}
+
 var codonInv ['Z'][][]byte   // codons indexed by amino acid
 var codonInvRC ['Z'][][]byte // RC of codons indexed by amino acid
 var codonInvRx ['Z']string
@@ -35,8 +33,6 @@ func init() {
 	var a [3]byte
 	for _, aa := range CodonTable {
 		copy(a[:], c)
-		codonBMap[a] = aa
-		codonSMap[string(c)] = aa
 		if aa != AAStop {
 			codonInv[aa] = append(codonInv[aa], append([]byte{}, c...))
 			codonInvRC[aa] = append(codonInvRC[aa], c.ReverseComplement())
@@ -70,18 +66,6 @@ func CodonIndex(b0, b1, b2 byte) int {
 // an amino acid symbol of AA20Alphabet or the stop symbol AAStop.
 func TranslateCodon(b0, b1, b2 byte) byte {
 	return CodonTable[CodonIndex(b0, b1, b2)]
-}
-
-func TranslateCodonC(b0, b1, b2 byte) byte {
-	return codonSlice[CodonIndex(b0, b1, b2)]
-}
-
-func TranslateCodonB(b [3]byte) byte {
-	return codonBMap[b]
-}
-
-func TranslateCodonS(s string) byte {
-	return codonSMap[s]
 }
 
 const (
