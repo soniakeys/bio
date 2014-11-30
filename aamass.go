@@ -24,6 +24,9 @@ import (
 // are a few holes.
 var AA20MonoisotopicMassTable [25]float64
 
+// kinda strange, aa19 are the 19 unique monoisotopic masses.
+var aa19Alphabet = AA20("ACDEFGHIKMNPQRSTVWY")
+
 // Note: must precede init of aa20ByMass.
 func init() {
 	AA20MonoisotopicMassTable['A'-'A'] = 71.03711
@@ -228,31 +231,14 @@ func NearestFloat64(s []float64, x float64) (i int, d float64) {
 	return i, math.Abs(x - s[i])
 }
 
-// score is number of masses in theo within .3 of a mass in measured
-func (meas MassSpec) score(theo MassSpec) int {
-	fmt.Println("theo:", theo)
+// overlap is number of masses in theo within .3 of a mass in meas
+func (meas MassSpec) Overlap(theo MassSpec) int {
 	c := 0
-	lastTm := 0.
-	lastMatch := false
 	for _, tm := range theo {
-		if tm == lastTm {
-			if lastMatch {
-				c++
-			}
-			continue
-		}
-		_, d := NearestFloat64(meas, tm)
-		fmt.Print(tm, " within ", d)
-		lastTm = tm
-		lastMatch = d <= .3
-		if lastMatch {
-			fmt.Println(" -- counted")
+		if _, d := NearestFloat64(meas, tm); d <= .3 {
 			c++
-		} else {
-			fmt.Println()
 		}
 	}
-	fmt.Println("Score:", c)
 	return c
 }
 
@@ -264,11 +250,11 @@ func (meas MassSpec) score(theo MassSpec) int {
 // Argument n is a kind of a search width.  Small numbers may miss solutions.
 // Large numbers waste time.  Try a number on the order of the parent mass.
 //
-// Returned peptides will have mass matching the parent mass of s, and be those
+// Returned peptides will have mass from parent mass pm to pm+20.3, and be those
 // with spectra best matching s.  All peptides "tied" for the best match are
 // returned.
 func (s MassSpec) SeqCyclic20(n int) []AA20 {
-	l := s.leaderboard(n, 1)
+	l := s.leaderboard(n, 250)
 	r := make([]AA20, len(l))
 	for i, c := range l {
 		r[i] = c.AA20
@@ -276,23 +262,25 @@ func (s MassSpec) SeqCyclic20(n int) []AA20 {
 	return r
 }
 
-func (s MassSpec) leaderboard(n, nr int) []massCand {
+func (s MassSpec) leaderboard(n, nr int) massLbd {
 	sort.Float64s(s)
+	answer := AA20("VKLFPFFNQY").MonoisotopicMass()
+	fmt.Println("answer score", s.Overlap(answer.CyclicSpec()))
 	pm := s[len(s)-1] // parent mass
 	// leaderboard, initialized with 0-peptide
 	l := massLbd{{}}
-	done := massLbd{} // candidates matching parent mass
+	u := map[string]massCand{} // candidates matching parent mass
 	for len(l) > 0 {
 		l.expand20()
 		for i := 0; i < len(l); {
 			c := l[i] // candidate in list
 			switch {
-			case c.Mass < pm:
+			case c.Mass < pm-.3:
 				i++
 				continue // candidate remains in the running
-			case math.Abs(pm-c.Mass) <= .3:
-				c.Score = s.score(c.AAMass.CyclicSpec()) // final Score
-				done = append(done, c)
+			case c.Mass < pm+20.3:
+				setFstr(&c)
+				u[c.Fstr] = c // save unique candidates
 			}
 			// c.m >= pm: remove from leaderboard
 			last := len(l) - 1
@@ -301,18 +289,58 @@ func (s MassSpec) leaderboard(n, nr int) []massCand {
 		}
 		if n < len(l) {
 			for i, c := range l {
-				l[i].Score = s.score(c.AAMass.LinearSpec())
+				l[i].Score = s.Overlap(c.AAMass.LinearSpec())
 			}
 			l = l[:Cut(l, n)]
 		}
 	}
-	nr = Cut(done, nr)
-	return done[:nr]
+	// lbd empty.  repopulate from saved unique candidates.
+	for _, c := range u {
+		c.Score = s.Overlap(c.AAMass.CyclicSpec()) // final scores
+		l = append(l, c)
+	}
+	nr = Cut(l, nr) // final cut
+	return l[:nr]
+}
+
+// this was a half-baked attempt to eliminate some duplicate peptides.
+// needs work.
+func setFstr(c *massCand) {
+	// string id is rotation that is heaviest in the front
+	max := 0.
+	maxStr := ""
+	i := c.AA20.Int()
+	m := c.AAMass
+	last := len(i) - 1
+	for _ = range m {
+		i0 := i[0]
+		m0 := m[0]
+		// weighted sum
+		w := 0.
+		for j, jm := range m {
+			w += float64(j) * jm
+		}
+		if w > max {
+			max = w
+			// save string for new max
+			maxStr = fmt.Sprintf("%d", i0)
+			for _, im := range i[1:] {
+				maxStr = fmt.Sprintf("%s %d", maxStr, im)
+			}
+		}
+		// rotate
+		copy(i, i[1:])
+		copy(m, m[1:])
+		i[last] = i0
+		m[last] = m0
+	}
+	c.Fstr = maxStr
 }
 
 type massCand struct {
 	AA20
 	AAMass
+	Fstr  string  // "front heavy" string of integer masses
 	Mass  float64 // total mass in AA20
 	Score int     // Score
 }
@@ -330,7 +358,7 @@ func (pl *massLbd) expand20() {
 		n := len(c.AA20)
 		pep := c.AA20[:n:n] // force append to copy the peptide
 		pepM := c.AAMass[:n:n]
-		for _, a := range AA20Alphabet {
+		for _, a := range aa19Alphabet {
 			m := AA20MonoisotopicMass(a)
 			e = append(e, massCand{
 				AA20:   append(pep, a),
