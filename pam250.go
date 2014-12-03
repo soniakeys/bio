@@ -1,9 +1,9 @@
 package bio
 
-var PAM250 *SubstMatrix
+var PAM250 *ScoreMatrix
 
 func init() {
-	PAM250 = NewSubstMatrix("ARNDCQEGHILKMFPSTWYV", []int{
+	PAM250 = NewScoreMatrix("ARNDCQEGHILKMFPSTWYV", []int{
 		2, -2, 0, 0, -2, 0, 0, 1, -1, -1, -2, -1, -1, -3, 1, 1, 1, -6, -3, 0,
 		-2, 6, 0, -1, -4, 1, -1, -3, 2, -2, -3, 3, 0, -4, 0, 0, -1, 2, -4, -2,
 		0, 0, 2, 2, -4, 1, 1, 0, 2, -2, -3, 1, -2, -3, 0, 1, 0, -4, -2, -2,

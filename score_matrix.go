@@ -1,12 +1,12 @@
 package bio
 
-// SubstMatrix holds a substitution matrix used for protien sequence alignment.
-type SubstMatrix struct {
+// ScoreMatrix holds an score matrix used for protein sequence alignment.
+type ScoreMatrix struct {
 	posTable   [25]int
 	scoreTable [20 * 20]int
 }
 
-// NewSubstMatrix creates a new SubstMatrix given alphabet a and score table s
+// NewScoreMatrix creates a new ScoreMatrix given alphabet a and score table s
 // as a flat slice.
 //
 // The alphabet a must contain exactly the symbols of AA20Alphabet but
@@ -15,11 +15,11 @@ type SubstMatrix struct {
 //
 // Unless otherwise documented, the allowable alphabet for AA strings passed
 // to methods is AA20Alphabet + GapSymbol.  Other symbols may cause panic.
-func NewSubstMatrix(a string, s []int) *SubstMatrix {
+func NewScoreMatrix(a string, s []int) *ScoreMatrix {
 	if len(a) != 20 || len(s) != 400 {
 		return nil
 	}
-	m := &SubstMatrix{}
+	m := &ScoreMatrix{}
 	for i, aa := range a {
 		m.posTable[aa-'A'] = i
 	}
@@ -28,20 +28,20 @@ func NewSubstMatrix(a string, s []int) *SubstMatrix {
 }
 
 // returns row position in score table
-func (m *SubstMatrix) pos(aa byte) int {
+func (m *ScoreMatrix) pos(aa byte) int {
 	return m.posTable[aa-'A']
 }
 
 // Score returns the alignment score of the given amino acid symbols.
 //
 // Arguments must be in AA20Alphabet.  GapSymbol will cause panic.
-func (m *SubstMatrix) Score(a1, a2 byte) int {
+func (m *ScoreMatrix) Score(a1, a2 byte) int {
 	return m.scoreTable[m.pos(a1)*20+m.pos(a2)]
 }
 
-func (m *SubstMatrix) LinearGap(s, t AA, gp int) (score int) {
+func (m *ScoreMatrix) LinearGap(s, t AA, gp int) (score int) {
 	if len(s) != len(t) {
-		panic("SubstMatrix.LinearGap strings different lengths")
+		panic("ScoreMatrix.LinearGap strings different lengths")
 	}
 	for i, sa := range s {
 		switch ta := t[i]; byte(GapSymbol) {
@@ -54,9 +54,9 @@ func (m *SubstMatrix) LinearGap(s, t AA, gp int) (score int) {
 	return
 }
 
-func (m *SubstMatrix) ConstantGap(s, t AA, gp int) (score int) {
+func (m *ScoreMatrix) ConstantGap(s, t AA, gp int) (score int) {
 	if len(s) != len(t) {
-		panic("SubstMatrix.LinearGap strings different lengths")
+		panic("ScoreMatrix.LinearGap strings different lengths")
 	}
 	const (
 		noGap = iota
