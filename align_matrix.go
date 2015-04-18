@@ -279,7 +279,7 @@ func (m *SubstMatrix) LinearGap(s, t AA, gp int) (score int) {
 // Result is score using constant gap pentalty gp.
 func (m *SubstMatrix) ConstantGap(s, t AA, gp int) (score int) {
 	if len(s) != len(t) {
-		panic("SubstMatrix.LinearGap strings different lengths")
+		panic("SubstMatrix.ConstantGap strings different lengths")
 	}
 	const (
 		noGap = iota
