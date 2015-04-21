@@ -476,7 +476,7 @@ func (m DNA8) Inc() {
 	}
 }
 
-// TTRatio compultes the transition to transversion ratio of two
+// TiTvRatio computes the transition to transversion ratio of two
 // DNA strings.
 //
 // Non-DNA symbols are ignored.
