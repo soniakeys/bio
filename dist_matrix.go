@@ -90,7 +90,7 @@ func (d DistanceMatrix) Additive() (ok bool, i, j, k, l int) {
 	return
 }
 
-// LimbWeight finds the weight of the edge to a leaf (a limb) in a phylogenic
+// limbWeight finds the weight of the edge to a leaf (a limb) in a phylogenic
 // tree corresponding to DistanceMatrix d.
 //
 // Argument j is an index of d representing a leaf node.
@@ -98,7 +98,7 @@ func (d DistanceMatrix) Additive() (ok bool, i, j, k, l int) {
 // Returned is the weight wt of an edge that would connect j to a phylogenic
 // tree, and two other leaf indexes, i and k, such that the edge connecting j
 // to the tree would connect directly to the path between i and k.
-func (d DistanceMatrix) LimbWeight(j int) (wt float64, i, k int) {
+func (d DistanceMatrix) limbWeight(j int) (wt float64, i, k int) {
 	// algorithm: pick k for convenience in iteration, iterate i over all
 	// other indexes, accumulating the value of i that minimizes wt.
 	var dj0, dj1, dk0, dk1 []float64
@@ -141,15 +141,15 @@ func (d DistanceMatrix) LimbWeight(j int) (wt float64, i, k int) {
 	return wtMin2 / 2, iMin2, k
 }
 
-// LimbWeightSubMatrix finds the weight of the edge to a leaf (a limb) in
+// limbWeightSubMatrix finds the weight of the edge to a leaf (a limb) in
 // a phylogenic tree corresponding to a submatrix of d.
 //
 // Argument j is an index of d representing a leaf node.  The submatrix
-// considered is d[:j+1][:j+1].  This variation of LimbWeight allows
+// considered is d[:j+1][:j+1].  This variation of limbWeight allows
 // simpler and more efficient code.
 //
-// Return values are the same as for LimbWeight.
-func (d DistanceMatrix) LimbWeightSubMatrix(j int) (wt float64, i, k int) {
+// Return values are the same as for limbWeight.
+func (d DistanceMatrix) limbWeightSubMatrix(j int) (wt float64, i, k int) {
 	k = j - 1
 	dj := d[j]
 	dk := d[k]
@@ -195,7 +195,7 @@ func (d DistanceMatrix) AdditiveTree() [][]Half {
 			t[1] = []Half{{0, wt}}
 			return
 		}
-		nLen, i, k := d.LimbWeightSubMatrix(n)
+		nLen, i, k := d.limbWeightSubMatrix(n)
 		x := d[i][n] - nLen
 		ap(n - 1)
 		// f() finds and returns connection node v.
