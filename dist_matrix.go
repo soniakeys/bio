@@ -3,8 +3,11 @@ package bio
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"math/rand"
+
+	"github.com/soniakeys/graph"
 )
 
 // DistanceMatrix holds a distance matrix for phylogenic analyses.
@@ -377,4 +380,215 @@ func RandomAdditiveMatrix(n int) DistanceMatrix {
 		d[i] = di
 	}
 	return d
+}
+
+type UPGMA struct {
+	Parent  int     // index of parent in parent list
+	Weight  float64 // edge weight from parent (eg, the evolutionary dist.)
+	Age     float64 // age (height above leaves)
+	NLeaves int     // number of leaves in cluster
+}
+
+// The rooted tree result of clustering is a from-tree, a list of data for
+// each node.  Nodes correspond to clusters.  The root, having no logical
+// parent, will have parent: -1 and wt: NaN.  It will also have mag: n.
+func (dm DistanceMatrix) UPGMA() []UPGMA {
+	// TODO rip out triangular matrix logic.  That proved possible but with
+	// a performance hit.  DistanceMatrix is square now.
+	ft := make([]UPGMA, len(dm)) // the from-tree
+	for i := range ft {
+		ft[i] = UPGMA{-1, math.NaN(), 0, 1} // initial isolated nodes
+	}
+
+	// cx converts a distance matrix index to a cluster index (a node number)
+	cx := make([]int, len(dm))
+	for i := range dm {
+		cx[i] = i
+	}
+
+	// closest clusters (min value in d)
+	// return smaller index (j) first
+	closest := func() (min float64, jMin, iMin int) {
+		min = math.Inf(1)
+		iMin = -1
+		jMin = -1
+		for i := 1; i < len(dm); i++ {
+			for j := 0; j < i; j++ {
+				if d := dm[i][j]; d < min {
+					min = d
+					iMin = i
+					jMin = j
+				}
+			}
+		}
+		return
+	}
+
+	for {
+		_, d1, d2 := closest()
+		//fmt.Println("d1, d2:", d1, d2, "dist:", min)
+
+		di1 := dm[d1] // rows in distance mastrix
+		di2 := dm[d2]
+		c1 := cx[d1] // cluster (node) numbers
+		c2 := cx[d2]
+		m1 := ft[c1].NLeaves // number of leaves in each cluster
+		m2 := ft[c2].NLeaves
+		m3 := m1 + m2 // total number of leaves for new cluster
+
+		// create node here, initial values come from d1, d2
+		root := len(ft)
+		age := di2[d1] / 2
+		ft = append(ft, UPGMA{
+			Parent:  -1,
+			Weight:  math.NaN(),
+			Age:     age,
+			NLeaves: m3,
+		})
+		ft[c1].Parent = root
+		ft[c2].Parent = root
+		ft[c1].Weight = age - ft[c1].Age
+		ft[c2].Weight = age - ft[c2].Age
+		cx[d1] = root
+
+		if len(dm) == 2 {
+			break
+		}
+
+		// replace d1 with mean distance, in three parts to work the triangle
+		mag1 := float64(m1)
+		mag2 := float64(m2)
+		invMag := 1 / float64(m3)
+		// run across row d1 to diagonal (j is m from the text, j < d1 < d2 here)
+		// (indexing the triangular representation, the larger index must come 1st)
+		for j, dij := range di1 {
+			di1[j] = (dij*mag1 + di2[j]*mag2) * invMag
+		}
+		// now run down column d1 from diagonal to d2
+		// (i is now m from the text, d1 < i < d2)
+		// (j continues to the diagonal at d2)
+		j := d1 + 1
+		for i := j; i < d2; i++ {
+			dm[i][d1] = (dm[i][d1]*mag1 + di2[j]*mag2) * invMag
+			j++
+		}
+		// finish column after d2
+		for i := d2 + 1; i < len(dm); i++ {
+			dm[i][d1] = (dm[i][d1]*mag1 + dm[i][d2]*mag2) * invMag
+		}
+		// d1 has been replaced, delete d2
+		copy(dm[d2:], dm[d2+1:])
+		dm = dm[:len(dm)-1]
+		for i := d2; i < len(dm); i++ {
+			di := dm[i]
+			copy(di[d2:], di[d2+1:])
+			dm[i] = di[:len(di)-1]
+		}
+		copy(cx[d2:], cx[d2+1:])
+		cx = cx[:len(dm)]
+	}
+	return ft
+}
+
+func (dm DistanceMatrix) NeighborJoin() (tree graph.LabeledAdjacencyList, wt []float64) {
+	// first copy dm so original is not destroyed
+	dc := make(DistanceMatrix, len(dm))
+	for i, di := range dm {
+		dc[i] = append([]float64{}, di...)
+	}
+	dm = dc
+	td := make([]float64, len(dm)) // total-distance vector
+	nx := make([]int, len(dm))     // node number corresponding to dist matrix index
+	for i := range dm {
+		nx[i] = i
+	}
+
+	// closest clusters (min value in dm)
+	// return smaller index (j) first
+	closest := func() (jMin, iMin int) {
+		min := math.Inf(1)
+		iMin = -1
+		jMin = -1
+		for i := 1; i < len(dm); i++ {
+			for j := 0; j < i; j++ {
+				d := float64(len(dm)-2)*dm[i][j] - td[i] - td[j]
+				if d < min {
+					min = d
+					iMin = i
+					jMin = j
+				}
+			}
+		}
+		return
+	}
+
+	// wt is edge weight from parent (limb length)
+	var nj func(int)
+	nj = func(m int) { // m is next internal node number
+		if len(dm) == 2 {
+			wt = make([]float64, 1, m-1)
+			wt[0] = dm[0][1]
+			tree = make(graph.LabeledAdjacencyList, m)
+			n0 := nx[0]
+			n1 := nx[1]
+			tree[n0] = []graph.Half{{To: n1}}
+			tree[n1] = []graph.Half{{To: n0}}
+			return
+		}
+		// compute or recompute TotalDistance
+		for k, dk := range dm {
+			t := 0.
+			for _, d := range dk {
+				t += d
+			}
+			td[k] = t
+		}
+		d1, d2 := closest()
+		Δ := (td[d2] - td[d1]) / float64(len(dm)-2)
+		d21 := dm[d2][d1]
+		ll2 := .5 * (d21 + Δ)
+		ll1 := .5 * (d21 - Δ)
+		n1 := nx[d1]
+		n2 := nx[d2]
+
+		di1 := dm[d1] // rows in distance matrix
+		di2 := dm[d2]
+
+		// replace d1 with mean distance
+		for j, dij := range di1 {
+			mn := .5 * (dij + di2[j] - d21)
+			if j == d1 && mn != 0 {
+				panic("uh uh, prolly skip this one...")
+			}
+			di1[j] = mn
+			dm[j][d1] = mn
+		}
+
+		// d1 has been replaced, delete d2
+		copy(dm[d2:], dm[d2+1:])
+		dm = dm[:len(dm)-1]
+		for i, di := range dm {
+			copy(di[d2:], di[d2+1:])
+			dm[i] = di[:len(di)-1]
+		}
+		nx[d1] = m
+		copy(nx[d2:], nx[d2+1:])
+		nx = nx[:len(dm)]
+
+		// recurse
+		nj(m + 1)
+
+		// join limbs to tree
+		wx1 := len(wt)
+		wx2 := len(wt) + 1
+		wt = append(wt, ll1, ll2)
+		tree[m] = append(tree[m],
+			graph.Half{n1, wx1},
+			graph.Half{n2, wx2})
+		tree[n1] = append(tree[n1], graph.Half{m, wx1})
+		tree[n2] = append(tree[n2], graph.Half{m, wx2})
+		return
+	}
+	nj(len(dm))
+	return
 }

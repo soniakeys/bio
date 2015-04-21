@@ -76,3 +76,55 @@ func TestRandomAdditiveMatrix(t *testing.T) {
 		}
 	}
 }
+
+func ExampleDistanceMatrix_UPGMA() {
+	d := bio.DistanceMatrix{
+		{0, 20, 17, 11},
+		{20, 0, 20, 13},
+		{17, 20, 0, 10},
+		{11, 13, 10, 0},
+	}
+	pl := d.UPGMA()
+	fmt.Println("node  parent  weight     age  leaves")
+	for i, u := range pl {
+		fmt.Printf(">%3d     %3d  %6.3f  %6.3f     %3d\n",
+			i, u.Parent, u.Weight, u.Age, u.NLeaves)
+	}
+	// Output:
+	// node  parent  weight     age  leaves
+	// >  0       5   7.000   0.000       1
+	// >  1       6   8.833   0.000       1
+	// >  2       4   5.000   0.000       1
+	// >  3       4   5.000   0.000       1
+	// >  4       5   2.000   5.000       2
+	// >  5       6   1.833   7.000       3
+	// >  6      -1     NaN   8.833       4
+}
+
+func ExampleDistanceMatrix_NeighborJoin() {
+	d := bio.DistanceMatrix{
+		{0, 23, 27, 20},
+		{23, 0, 30, 28},
+		{27, 30, 0, 30},
+		{20, 28, 30, 0},
+	}
+	tree, wt := d.NeighborJoin()
+	fmt.Println("n1  n2  weight")
+	for n, to := range tree {
+		for _, h := range to {
+			fmt.Printf("%d  %2d   %6.3f\n", n, h.To, wt[h.Label])
+		}
+	}
+	// Output:
+	// n1  n2  weight
+	// 0   5    8.000
+	// 1   4   13.500
+	// 2   4   16.500
+	// 3   5   12.000
+	// 4   5    2.000
+	// 4   1   13.500
+	// 4   2   16.500
+	// 5   3   12.000
+	// 5   0    8.000
+	// 5   4    2.000
+}
