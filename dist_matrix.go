@@ -382,16 +382,21 @@ func RandomAdditiveMatrix(n int) DistanceMatrix {
 	return d
 }
 
+// []UPGMA is the return type from DistanceMatrix.UPGMA
 type UPGMA struct {
 	Parent  int     // index of parent in parent list
-	Weight  float64 // edge weight from parent (eg, the evolutionary dist.)
+	Weight  float64 // edge weight from parent (the evolutionary distance)
 	Age     float64 // age (height above leaves)
-	NLeaves int     // number of leaves in cluster
+	NLeaves int     // number of leaves at or below this node
 }
 
-// The rooted tree result of clustering is a from-tree, a list of data for
-// each node.  Nodes correspond to clusters.  The root, having no logical
-// parent, will have parent: -1 and wt: NaN.  It will also have mag: n.
+// UPGMA constructs a rooted ultrametric tree from DistanceMatrix dm.
+//
+// The tree result is returned as a parent list, A list of nodes where each
+// points to its parent.  Leaves of the tree are represented by elements
+// 0:len(dm).  The root is the last element in the list.  Having no logical
+// parent, the root will have parent = -1 and Weight = NaN.
+// It will also have NLeaves = len(dm).
 func (dm DistanceMatrix) UPGMA() []UPGMA {
 	// TODO rip out triangular matrix logic.  That proved possible but with
 	// a performance hit.  DistanceMatrix is square now.
@@ -490,6 +495,12 @@ func (dm DistanceMatrix) UPGMA() []UPGMA {
 	return ft
 }
 
+// NeighborJoin constructs an unrooted tree from a distance matrix using the
+// neighbor joining algorithm.
+//
+// The tree is returned as an undirected graph and a weight list.  Edges of
+// the graph are labeled as indexes into the weight list.  Leaves of the
+// the tree will be graph node 0:len(dm).
 func (dm DistanceMatrix) NeighborJoin() (tree graph.LabeledAdjacencyList, wt []float64) {
 	// first copy dm so original is not destroyed
 	dc := make(DistanceMatrix, len(dm))

@@ -7,7 +7,7 @@ import (
 	"github.com/soniakeys/bio"
 )
 
-func ExampleDistanceMatrix_Valid() {
+func ExampleDistanceMatrix_Validate() {
 	d := bio.DistanceMatrix{
 		{0, 13, 21, 22},
 		{13, 0, 12, 13},
