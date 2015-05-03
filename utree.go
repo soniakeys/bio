@@ -283,6 +283,9 @@ func (u *UTree) MaxParsimonyEdge(from int, to graph.Half) float64 {
 		return tot
 	}
 
+	for i := range u.Costs {
+		u.Costs[i] = 0
+	}
 	// outer loop goes by symbol position
 	tot := 0.
 	for sx := range u.Kmers[0] {
@@ -401,4 +404,57 @@ func (u *UTree) SubTrees(a, b int) (w, x, y, z int) {
 		y, z = 0, 1
 	}
 	return
+}
+
+func (u *UTree) MaxParsimony() float64 {
+	cRef := u.MaxParsimonyUnrooted()
+	cMin := cRef
+	var frMin, toMin, fxMin, txMin int
+	trySwaps := func(fr, to int) {
+		_, x, y, z := u.SubTrees(fr, to)
+		u.SwapEdges(fr, x, to, y)     // swap once
+		c := u.MaxParsimonyUnrooted() // recompute
+		if c < cMin {
+			cMin = c
+			frMin = fr
+			toMin = to
+			fxMin = x
+			txMin = z // a little tricky here...
+			// min found with index y, but after completing swaps
+			// y and z will be left swapped, so store z here.
+		}
+		u.SwapEdges(fr, x, to, z)    // swap the other way
+		c = u.MaxParsimonyUnrooted() // recompute
+		if c < cMin {
+			cMin = c
+			frMin = fr
+			toMin = to
+			fxMin = x
+			txMin = y // a little tricky again
+		}
+		// swap once more to restore subtrees of a and b, although
+		// leaving y and z swapped.
+		u.SwapEdges(fr, x, to, y)
+	}
+	for {
+		// iterate over internal edges (pick the half where to > fr)
+		// try MPU with swaps both ways, accumulating cMin and friends.
+		for fr, to := range u.T {
+			if len(to) < 3 {
+				continue // leaf, skip
+			}
+			for _, to := range to {
+				if len(u.T[to.To]) < 3 || to.To < fr {
+					continue
+				}
+				trySwaps(fr, to.To) // here's an edge to try
+			}
+		}
+		if cMin == cRef {
+			return cRef // no progress, algorithm terminates
+		}
+		// apply best swap and iterate
+		u.SwapEdges(frMin, fxMin, toMin, txMin)
+		cRef = u.MaxParsimonyUnrooted()
+	}
 }
