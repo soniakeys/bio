@@ -398,8 +398,6 @@ type UPGMA struct {
 // parent, the root will have parent = -1 and Weight = NaN.
 // It will also have NLeaves = len(dm).
 func (dm DistanceMatrix) UPGMA() []UPGMA {
-	// TODO rip out triangular matrix logic.  That proved possible but with
-	// a performance hit.  DistanceMatrix is square now.
 	ft := make([]UPGMA, len(dm)) // the from-tree
 	for i := range ft {
 		ft[i] = UPGMA{-1, math.NaN(), 0, 1} // initial isolated nodes
@@ -460,35 +458,25 @@ func (dm DistanceMatrix) UPGMA() []UPGMA {
 			break
 		}
 
-		// replace d1 with mean distance, in three parts to work the triangle
+		// replace d1 with mean distance
 		mag1 := float64(m1)
 		mag2 := float64(m2)
 		invMag := 1 / float64(m3)
-		// run across row d1 to diagonal (j is m from the text, j < d1 < d2 here)
-		// (indexing the triangular representation, the larger index must come 1st)
 		for j, dij := range di1 {
-			di1[j] = (dij*mag1 + di2[j]*mag2) * invMag
-		}
-		// now run down column d1 from diagonal to d2
-		// (i is now m from the text, d1 < i < d2)
-		// (j continues to the diagonal at d2)
-		j := d1 + 1
-		for i := j; i < d2; i++ {
-			dm[i][d1] = (dm[i][d1]*mag1 + di2[j]*mag2) * invMag
-			j++
-		}
-		// finish column after d2
-		for i := d2 + 1; i < len(dm); i++ {
-			dm[i][d1] = (dm[i][d1]*mag1 + dm[i][d2]*mag2) * invMag
+			if j != d1 {
+				d := (dij*mag1 + di2[j]*mag2) * invMag
+				di1[j] = d
+				dm[j][d1] = d
+			}
 		}
 		// d1 has been replaced, delete d2
 		copy(dm[d2:], dm[d2+1:])
 		dm = dm[:len(dm)-1]
-		for i := d2; i < len(dm); i++ {
-			di := dm[i]
+		for i, di := range dm {
 			copy(di[d2:], di[d2+1:])
 			dm[i] = di[:len(di)-1]
 		}
+		// delete d2 from cluster index
 		copy(cx[d2:], cx[d2+1:])
 		cx = cx[:len(dm)]
 	}
