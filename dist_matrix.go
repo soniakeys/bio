@@ -15,7 +15,7 @@ import (
 // See DistanceMatrix.Valid for typical restrictions.
 type DistanceMatrix [][]float64
 
-// Valid validates a DistanceMarix.
+// Valid validates a DistanceMarix as Euclidean.
 //
 // Conditions are:
 //
