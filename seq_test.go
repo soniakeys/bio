@@ -45,6 +45,14 @@ func ExampleSeq_AllIndex() {
 	// [5 7]
 }
 
+func ExampleSeq_AllCount() {
+	s := bio.Seq("Atatgatatat")
+	m := bio.Seq("atat")
+	fmt.Println(s.AllCount(m))
+	// Output:
+	// 2
+}
+
 func ExampleSeq_ToUpper() {
 	t := bio.Seq("AGgCT-AC?")
 	fmt.Println(t.ToUpper())

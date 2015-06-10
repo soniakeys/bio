@@ -15,6 +15,40 @@ func (s DNA8) String() string {
 	return string(s)
 }
 
+// AllIndex finds all occurrences of a motif in a sequence.
+//
+// Returned is a list of indexes of all occurrences of motif m in sequence s,
+// including overlapping ones.
+func (s DNA8) AllIndex(m DNA8) (x []int) {
+ij:
+	for i, j := 0, len(m); j <= len(s); i, j = i+1, j+1 {
+		for k, mk := range m {
+			if (s[i+k]^mk)&^LCBit != 0 {
+				continue ij
+			}
+		}
+		x = append(x, i)
+	}
+	return
+}
+
+// AllCount counts all occurrences of a motif in a sequence,
+// including overlaps.
+//
+// It is equivalent to len(s.AllIndex(m)).
+func (s DNA8) AllCount(m DNA8) (x int) {
+ij:
+	for i, j := 0, len(m); j <= len(s); i, j = i+1, j+1 {
+		for k, mk := range m {
+			if (s[i+k]^mk)&^LCBit != 0 {
+				continue ij
+			}
+		}
+		x++
+	}
+	return
+}
+
 // BaseFreq returns counts of each of the four DNA bases.
 func (s DNA8) BaseFreq() (a, c, t, g int) {
 	return baseFreq8(s)
