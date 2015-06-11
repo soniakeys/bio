@@ -22,7 +22,7 @@ import (
 // access the table directly.
 //
 // Note that the table length is 25 and holds 20 amino acids, so there
-// are a few holes.
+// are a few holes with zero values.
 var AA20IntegerMassTable [25]uint8
 
 func init() {
@@ -106,6 +106,39 @@ func (p AAInt) String() string {
 	return strings.Join(s, "-")
 }
 
+// PrefixSpec constructs a prefix spectrum for a linear peptide.
+//
+// The empty string is not counted.  The result spectrum is of the
+// same length as the input peptide p.
+func (p AAInt) PrefixSpec() IntSpec {
+	s := make(IntSpec, len(p))
+	sum := 0
+	for i, m := range p {
+		sum += int(m)
+		s[i] = sum
+	}
+	return s
+}
+
+// IdealSpec constructs a prefix-suffix spectrum for a linear peptide.
+//
+// The empty string is counted once and the full string is counted once,
+// giving a spectrum length of exactly 2* the length of the input peptide p.
+func (p AAInt) IdealSpec() IntSpec {
+	s := make(IntSpec, 2*len(p))
+	sum := 0
+	for i, m := range p {
+		s[i] = sum
+		sum += int(m)
+	}
+	for i, m := range p {
+		s[len(p)+i] = sum
+		sum -= int(m)
+	}
+	sort.Ints(s)
+	return s
+}
+
 // LinearSpec synthesizes the theoretical integer spectrum for a linear peptide.
 func (p AAInt) LinearSpec() IntSpec {
 	s := make(IntSpec, NumSubPepLinear(len(p)))
@@ -139,12 +172,44 @@ func (p AAInt) CyclicSpec() IntSpec {
 	return s
 }
 
-// The 18 uinique integer masses out of the 20 proteinogenic amino acids.
-var AA18Int AAInt
+var (
+	// The 18 uinique integer masses out of the 20 proteinogenic amino acids.
+	AA18Int AAInt
+
+	// look up IUPAC symbol for one of 18 integer masses.  value is '-' for
+	// all values in in AA18Int.
+	AAFrom18 [AA18IntMax + 1]byte
+)
+
+// Max integer mass is 186 (for Tryptophan.)
+const AA18IntMax = 186
 
 func init() {
 	AA18Int = AAInt{57, 71, 87, 97, 99, 101, 103, 113, 114,
 		115, 128, 129, 131, 137, 147, 156, 163, 186}
+
+	// populate AAFrom18
+	for m := range AAFrom18 {
+		AAFrom18[m] = '-'
+	}
+	for z := len(AA20IntegerMassTable) - 1; z >= 0; z-- {
+		if m := AA20IntegerMassTable[z]; m > 0 {
+			AAFrom18[m] = 'A' + byte(z)
+		}
+	}
+}
+
+func (p AAInt) AA20() (p2 AA20, ok bool) {
+	p2 = make(AA20, len(p))
+	ok = true
+	for i, m := range p {
+		s := AAFrom18[m]
+		if s == '-' {
+			ok = false
+		}
+		p2[i] = s
+	}
+	return
 }
 
 // expand grows each peptide in l by appending a single amino acid to the end.

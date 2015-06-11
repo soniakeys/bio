@@ -7,6 +7,12 @@ import (
 	"github.com/soniakeys/bio"
 )
 
+func ExampleAAInt_IdealSpec() {
+	fmt.Println(bio.AAInt{57, 97, 57}.IdealSpec())
+	// Output:
+	// [0 57 57 154 154 211]
+}
+
 func ExampleCut() {
 	s := sort.IntSlice{3, 1, 4, 3, 2}
 	fmt.Println(s)
