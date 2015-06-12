@@ -65,6 +65,17 @@ func ReadFASTA(r io.Reader) (seq []FASTASeq, err error) {
 	return seq, nil
 }
 
+// ReadFASTAFile is a high level function that reads an entire FASTA file
+// into memory.
+func ReadFASTAFile(path string) ([]FASTASeq, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	return ReadFASTA(f)
+}
+
 // second reader follows
 
 // FASTAReader type for representing a FASTA stream.
@@ -116,15 +127,4 @@ read:
 		}
 	}
 	return f, err
-}
-
-// ReadFASTAFile is a high level function that reads an entire FASTA file
-// into memory.
-func ReadFASTAFile(path string) ([]FASTASeq, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return ReadFASTA(f)
 }
