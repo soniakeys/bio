@@ -8,6 +8,132 @@ import (
 	"github.com/soniakeys/bio"
 )
 
+type DNA []byte
+
+func (s DNA) Copy() DNA { return append(DNA{}, s...) }
+
+func HammingDistance(p, q DNA) int {
+	h := 0
+	for i, b := range p {
+		if b != q[i] {
+			h++
+		}
+	}
+	return h
+}
+
+func Neighbors(Pattern DNA, d int) []DNA {
+	if d == 0 {
+		return []DNA{Pattern.Copy()}
+	}
+	if len(Pattern) == 1 {
+		return []DNA{DNA("A"), DNA("C"), DNA("T"), DNA("G")}
+	}
+	Neighborhood := []DNA{}
+	Suffix := Pattern[1:]
+	SuffixNeighbors := Neighbors(Suffix, d)
+	for _, Text := range SuffixNeighbors {
+		if HammingDistance(Suffix, Text) < d {
+			for _, x := range DNA("ACTG") {
+				Neighborhood = append(Neighborhood, append(DNA{x}, Text...))
+			}
+		} else {
+			Neighborhood = append(Neighborhood, append(Pattern[:1:1], Text...))
+		}
+	}
+	return Neighborhood
+}
+
+func BenchmarkHammingVariants1(b *testing.B) {
+	m := bio.DNA8("CATGTCGCA")
+	for i := 0; i < b.N; i++ {
+		m.HammingVariants(1)
+	}
+}
+
+func BenchmarkVarNeighbors1(b *testing.B) {
+	m := DNA("CATGTCGCA")
+	for i := 0; i < b.N; i++ {
+		Neighbors(m, 1)
+	}
+}
+
+func BenchmarkHammingVariants2(b *testing.B) {
+	m := bio.DNA8("CATGTCGCA")
+	for i := 0; i < b.N; i++ {
+		m.HammingVariants(2)
+	}
+}
+
+func BenchmarkVarNeighbors2(b *testing.B) {
+	m := DNA("CATGTCGCA")
+	for i := 0; i < b.N; i++ {
+		Neighbors(m, 2)
+	}
+}
+
+func BenchmarkHammingVariants3(b *testing.B) {
+	m := bio.DNA8("CATGTCGCA")
+	for i := 0; i < b.N; i++ {
+		m.HammingVariants(3)
+	}
+}
+
+func BenchmarkVarNeighbors3(b *testing.B) {
+	m := DNA("CATGTCGCA")
+	for i := 0; i < b.N; i++ {
+		Neighbors(m, 3)
+	}
+}
+
+func BenchmarkHammingVariants4(b *testing.B) {
+	m := bio.DNA8("CATGTCGCA")
+	for i := 0; i < b.N; i++ {
+		m.HammingVariants(4)
+	}
+}
+
+func BenchmarkVarNeighbors4(b *testing.B) {
+	m := DNA("CATGTCGCA")
+	for i := 0; i < b.N; i++ {
+		Neighbors(m, 4)
+	}
+}
+
+func BenchmarkHammingVariants5(b *testing.B) {
+	m := bio.DNA8("CATGTCGCA")
+	for i := 0; i < b.N; i++ {
+		m.HammingVariants(5)
+	}
+}
+
+func BenchmarkVarNeighbors5(b *testing.B) {
+	m := DNA("CATGTCGCA")
+	for i := 0; i < b.N; i++ {
+		Neighbors(m, 5)
+	}
+}
+
+func ExampleDNA8_FreqArray() {
+	fmt.Println(bio.DNA8("ACGCGGCTCTGAAA").FreqArray(2))
+	// Output:
+	// [2 1 0 0 0 0 2 2 0 1 0 1 1 2 0 1]
+}
+
+func ExampleDNA8_ModalKmers() {
+	s := bio.DNA8("ACGTTGCATGTCGCATGATGCATGAGAGCT")
+	fmt.Println(s.ModalKmers(4))
+	// Output:
+	// [GCAT CATG]
+}
+
+func ExampleDNA8_ModalSmallKmers() {
+	s := bio.DNA8("ACGTTGCATGTCGCATGATGCATGAGAGCT")
+	fmt.Println(s.ModalSmallKmers(4))
+	// Output:
+	// [CATG GCAT]
+}
+
 func BenchmarkDNA8Complement100(b *testing.B) {
 	for i := 0; i <= b.N; i++ {
 		bio.DNA8Complement(d1k100[i%1000])

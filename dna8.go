@@ -49,6 +49,83 @@ ij:
 	return
 }
 
+// ModalKmers returns the most frequent k-mers in a DNA8 string.
+//
+//  s is the string to search.
+//  k is the k-mer length.
+//
+// This variant works for large k, but at the expense of allocated copy of s.
+// See ModalSmallKmers for a variant more efficent with small k.
+func (s DNA8) ModalKmers(k int) Kmers {
+	ms := ModalKmers(string(s), k) // call string version; it uses a map.
+	m := make(Kmers, len(ms))
+	for i, mi := range ms {
+		m[i] = DNA8(mi)
+	}
+	return m
+}
+
+func (s DNA8) num() int64 {
+	var o int64
+	for _, b := range s {
+		o = o<<2 | int64(b&6)
+	}
+	return o >> 1
+}
+
+func strDNA8(n int64, k int) DNA8 {
+	a := make(DNA8, k)
+	for k > 0 {
+		k--
+		a[k] = "ACTG"[n&3]
+		n >>= 2
+	}
+	return a
+}
+
+func (s DNA8) FreqArray(k int) []int {
+	a := make([]int, 1<<(2*uint(k)))
+	mask := int64(len(a) - 1)
+	n := s[:k].num()
+	a[n] = 1
+	for k < len(s) {
+		n = n<<2&mask | int64(s[k]>>1&3)
+		a[n]++
+		k++
+	}
+	return a
+}
+
+// ModalSmallKmers returns the most frequent k-mers in a DNA8 string.
+//
+//  s is the string to search.
+//  k is the k-mer length.
+//
+// This variant is fast and efficient--as long as k isn't too big.
+// It allocates no additional copy of s, but does allocate an integer array
+// of size 2^(2*k).  So it's good with large s and small k.
+// See ModalKmers for a variant practical for larger k.
+func (s DNA8) ModalSmallKmers(k int) Kmers {
+	a := s.FreqArray(k)
+	var max, nMax int
+	for _, f := range a {
+		switch {
+		case f == max:
+			nMax++
+		case f > max:
+			max = f
+			nMax = 1
+		}
+	}
+	m := make(Kmers, 0, nMax)
+	for n, f := range a {
+		if f == max {
+			m = append(m, strDNA8(int64(n), k))
+		}
+	}
+	return m
+}
+
 // BaseFreq returns counts of each of the four DNA bases.
 func (s DNA8) BaseFreq() (a, c, t, g int) {
 	return baseFreq8(s)
