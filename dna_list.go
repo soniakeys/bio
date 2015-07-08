@@ -5,6 +5,7 @@ package bio
 
 import (
 	"bytes"
+	"fmt"
 	"math"
 	"math/rand"
 )
@@ -62,6 +63,8 @@ func (x Kmers) Uniform() bool {
 // Motif finding synopsis
 //
 // DNA8List.HammingMotifs  brute force over kmers present
+// DNA8List.HammingMotifs1 brute force over kmers present
+// DNA8List.HammingMotifs2 brute force over kmers present
 // DNA8List.MedianMotifs,  brute force over all possible kmers
 // DNA8List.GreedyMotifSearch
 // DNA8List.RandomMotifSearch
@@ -427,13 +430,41 @@ func (p FracProfile) MostProbKmers(l []DNA8) Kmers {
 }
 
 // HammingMotifs finds a list of motifs of length k that appear within
-// hamming distance d in each string in the list dna.
-func (dna DNA8List) HammingMotifs(k, d int) (r []string) {
+// hamming distance d in each string in samples.
+//
+// That is, for each result kmer in r, there will be a kmer within
+// hamming distance d in each string of samples.
+func (samples DNA8List) HammingMotifs(k, d int) []DNA8 {
+	// by the book...
+	Patterns := map[string]DNA8{}
+	for _, seq := range samples {
+		for i, j := 0, k; j <= len(seq); i, j = i+1, j+1 {
+		hv:
+			for _, Patternʹ := range seq[i:j].HammingVariantsRef(d) {
+				for _, seq := range samples {
+					if h := seq.MotifHamming(Patternʹ); h > d {
+						continue hv
+					}
+				}
+				Patterns[string(Patternʹ)] = Patternʹ
+			}
+		}
+	}
+	r := make([]DNA8, len(Patterns))
+	i := 0
+	for _, r[i] = range Patterns {
+		i++
+	}
+	return r
+}
+
+// HammingMotifs1.  Same result, different algorithm.
+func (samples DNA8List) HammingMotifs1(k, d int) (r []string) {
 	// collect unique kmers
 	uk := map[string]struct{}{}
-	for _, d := range dna {
+	for _, d := range samples {
 		s := string(d)
-		for i, j := 0, k; j < len(s); i, j = i+1, j+1 {
+		for i, j := 0, k; j <= len(s); i, j = i+1, j+1 {
 			uk[s[i:j]] = struct{}{}
 		}
 	}
@@ -447,7 +478,7 @@ func (dna DNA8List) HammingMotifs(k, d int) (r []string) {
 		}
 	}
 	// test each variant
-	a := make([]bool, len(dna))
+	a := make([]bool, len(samples))
 l1:
 	for ap := range v {
 		for i := range a {
@@ -456,14 +487,14 @@ l1:
 		found := 0
 		copy(kb, ap)
 		for _, vv := range kb.HammingVariants(d) {
-			for i, s := range dna {
+			for i, s := range samples {
 				if a[i] {
 					continue
 				}
 				if x := bytes.Index(s, vv); x >= 0 {
 					a[i] = true
 					found++
-					if found == len(dna) {
+					if found == len(samples) {
 						r = append(r, ap)
 						continue l1
 					}
@@ -474,11 +505,77 @@ l1:
 	return
 }
 
+// HammingMotifs2.  Same result, different algorithm.
+func (samples DNA8List) HammingMotifs2(k, d int) (r []string) {
+	type kset map[string]struct{}
+	// dna neigbors, list parallel to dna
+	// dnbs[i] is set of unique neighbors over all kmers of dna[i]
+	dnbs := make([]kset, len(samples))
+	// unbs, set of all unique neighbors of kmers of dna.
+	unbs := kset{}
+
+	// build dnbs, unbs in one pass.
+	//
+	// useful in the process is unique kmer neighbors:
+	// key is a kmer of a seq of dna
+	// val is neighbors of kmer
+	uknbs := map[string][]string{}
+	for n, seq := range samples {
+		fmt.Println("seq", n, ":", seq[:10], "...")
+		// unique kmers over the current sequence
+		uk := kset{}
+		// unique neigbors over the current sequence
+		ds := kset{}
+		// kmers in seq
+		s := string(seq)
+		for i, j := 0, k; j <= len(s); i, j = i+1, j+1 {
+			kmer := s[i:j]
+			if _, ok := uk[kmer]; ok {
+				continue
+			}
+			fmt.Println("   new kmer this seq:", kmer)
+			// first time kmer seen this seq
+			uk[kmer] = struct{}{}
+			nbs, ok := uknbs[kmer]
+			if !ok {
+				// first time kmer seen in dna
+				vs := seq[i:j].HammingVariants(d)
+				nbs = make([]string, len(vs))
+				for i, v := range vs {
+					nb := string(v)
+					unbs[nb] = struct{}{} // store in neighbors of dna
+					nbs[i] = nb           // accumulate kmer neigbors
+				}
+				uknbs[kmer] = nbs // store neighbors for kmer
+			}
+			// now whether it was new overall or not, it was
+			// new to this seq so store in neighbors of this seq.
+			for _, nb := range nbs {
+				ds[nb] = struct{}{}
+			}
+		}
+		// all neighbors of seq now known.
+		dnbs[n] = ds
+	}
+	// dnbs, unbs complete.
+	// test each unique neighbor
+u:
+	for u := range unbs {
+		for _, nbs := range dnbs {
+			if _, ok := nbs[u]; !ok {
+				continue u
+			}
+		}
+		r = append(r, u)
+	}
+	return
+}
+
 // MedianMotifs returns a list of kmers that are at minimum cumulative distance
 // (by the method DNA8List.MotifHamming) to a list of strings l.
 //
-// Returned is a list of all motifs found with minimum MotifHamming
-// and the minimum MotifHamming cumulative distance.
+// Returned is a list of all motifs found with minimum MotifHamming.
+// Also returned is the corresponding minimum MotifHamming cumulative distance.
 //
 // The algorithm is brute force and practical only when k is small.
 func (l DNA8List) MedianMotifs(k int) (m Kmers, hamming int) {

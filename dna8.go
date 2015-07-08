@@ -197,6 +197,7 @@ func (s DNA8) MinGCSkew() (m []int) {
 // HammingVariants returns a list of all DNA k-mers within hamming distance h
 // of receiver kmer k.  Case is preserved by position.
 func (k DNA8) HammingVariants(h int) []DNA8 {
+	// recursive, but minimizes allocations
 	v := []DNA8{append(DNA8{}, k...)}
 	const sym = "A C T G"
 	var f func(DNA8, int)
@@ -221,6 +222,38 @@ func (k DNA8) HammingVariants(h int) []DNA8 {
 	}
 	f(k, h)
 	return v
+}
+
+// HammingVariants1.  Same result, different algorithm.
+func (kmer DNA8) HammingVariantsRef(d int) []DNA8 {
+	// "by the book."  well, except it still preserves case by position.
+	// churns memory a bit.
+	if d == 0 {
+		return []DNA8{append(DNA8{}, kmer...)}
+	}
+	if len(kmer) == 1 {
+		b := kmer[0]
+		c := b & LCBit
+		return []DNA8{
+			DNA8{'A' | c},
+			DNA8{'C' | c},
+			DNA8{'T' | c},
+			DNA8{'G' | c},
+		}
+	}
+	var nd []DNA8
+	suf := kmer[1:]
+	c := kmer[0] & LCBit
+	for _, txt := range suf.HammingVariants(d) {
+		if suf.Hamming(txt) < d {
+			for _, b := range []byte("ACTG") {
+				nd = append(nd, append(DNA8{b | c}, txt...))
+			}
+		} else {
+			nd = append(nd, append(DNA8{kmer[0]}, txt...))
+		}
+	}
+	return nd
 }
 
 // ModalHammingKmers returns DNA kmers matching a maximum number of times
@@ -415,7 +448,7 @@ func (s DNA8) Hamming(t DNA8) (d int) {
 // to any same length kmer in sequence s.
 func (s DNA8) MotifHamming(m DNA8) int {
 	min := len(m)
-	for i, j := 0, len(m); j < len(s); i, j = i+1, j+1 {
+	for i, j := 0, len(m); j <= len(s); i, j = i+1, j+1 {
 		if h := m.Hamming(s[i:j]); h < min {
 			min = h
 		}

@@ -8,42 +8,6 @@ import (
 	"github.com/soniakeys/bio"
 )
 
-type DNA []byte
-
-func (s DNA) Copy() DNA { return append(DNA{}, s...) }
-
-func HammingDistance(p, q DNA) int {
-	h := 0
-	for i, b := range p {
-		if b != q[i] {
-			h++
-		}
-	}
-	return h
-}
-
-func Neighbors(Pattern DNA, d int) []DNA {
-	if d == 0 {
-		return []DNA{Pattern.Copy()}
-	}
-	if len(Pattern) == 1 {
-		return []DNA{DNA("A"), DNA("C"), DNA("T"), DNA("G")}
-	}
-	Neighborhood := []DNA{}
-	Suffix := Pattern[1:]
-	SuffixNeighbors := Neighbors(Suffix, d)
-	for _, Text := range SuffixNeighbors {
-		if HammingDistance(Suffix, Text) < d {
-			for _, x := range DNA("ACTG") {
-				Neighborhood = append(Neighborhood, append(DNA{x}, Text...))
-			}
-		} else {
-			Neighborhood = append(Neighborhood, append(Pattern[:1:1], Text...))
-		}
-	}
-	return Neighborhood
-}
-
 func BenchmarkHammingVariants1(b *testing.B) {
 	m := bio.DNA8("CATGTCGCA")
 	for i := 0; i < b.N; i++ {
@@ -52,9 +16,9 @@ func BenchmarkHammingVariants1(b *testing.B) {
 }
 
 func BenchmarkVarNeighbors1(b *testing.B) {
-	m := DNA("CATGTCGCA")
+	m := bio.DNA8("CATGTCGCA")
 	for i := 0; i < b.N; i++ {
-		Neighbors(m, 1)
+		m.HammingVariants1(1)
 	}
 }
 
@@ -66,9 +30,9 @@ func BenchmarkHammingVariants2(b *testing.B) {
 }
 
 func BenchmarkVarNeighbors2(b *testing.B) {
-	m := DNA("CATGTCGCA")
+	m := bio.DNA8("CATGTCGCA")
 	for i := 0; i < b.N; i++ {
-		Neighbors(m, 2)
+		m.HammingVariants1(2)
 	}
 }
 
@@ -80,9 +44,9 @@ func BenchmarkHammingVariants3(b *testing.B) {
 }
 
 func BenchmarkVarNeighbors3(b *testing.B) {
-	m := DNA("CATGTCGCA")
+	m := bio.DNA8("CATGTCGCA")
 	for i := 0; i < b.N; i++ {
-		Neighbors(m, 3)
+		m.HammingVariants1(3)
 	}
 }
 
@@ -94,9 +58,9 @@ func BenchmarkHammingVariants4(b *testing.B) {
 }
 
 func BenchmarkVarNeighbors4(b *testing.B) {
-	m := DNA("CATGTCGCA")
+	m := bio.DNA8("CATGTCGCA")
 	for i := 0; i < b.N; i++ {
-		Neighbors(m, 4)
+		m.HammingVariants1(4)
 	}
 }
 
@@ -108,9 +72,9 @@ func BenchmarkHammingVariants5(b *testing.B) {
 }
 
 func BenchmarkVarNeighbors5(b *testing.B) {
-	m := DNA("CATGTCGCA")
+	m := bio.DNA8("CATGTCGCA")
 	for i := 0; i < b.N; i++ {
-		Neighbors(m, 5)
+		m.HammingVariants1(5)
 	}
 }
 
