@@ -226,7 +226,7 @@ func (k DNA8) HammingVariants(h int) []DNA8 {
 
 // HammingVariants1.  Same result, different algorithm.
 func (kmer DNA8) HammingVariantsRef(d int) []DNA8 {
-	// "by the book."  well, except it still preserves case by position.
+	// "by the book."  well, except it's improved to preserve case by position.
 	// churns memory a bit.
 	if d == 0 {
 		return []DNA8{append(DNA8{}, kmer...)}

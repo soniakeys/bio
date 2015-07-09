@@ -8,73 +8,17 @@ import (
 	"github.com/soniakeys/bio"
 )
 
-func BenchmarkHammingVariants1(b *testing.B) {
+func BenchmarkHammingVariantsRef(b *testing.B) {
 	m := bio.DNA8("CATGTCGCA")
 	for i := 0; i < b.N; i++ {
-		m.HammingVariants(1)
+		m.HammingVariantsRef(2)
 	}
 }
 
-func BenchmarkVarNeighbors1(b *testing.B) {
-	m := bio.DNA8("CATGTCGCA")
-	for i := 0; i < b.N; i++ {
-		m.HammingVariants1(1)
-	}
-}
-
-func BenchmarkHammingVariants2(b *testing.B) {
+func BenchmarkHammingVariants(b *testing.B) {
 	m := bio.DNA8("CATGTCGCA")
 	for i := 0; i < b.N; i++ {
 		m.HammingVariants(2)
-	}
-}
-
-func BenchmarkVarNeighbors2(b *testing.B) {
-	m := bio.DNA8("CATGTCGCA")
-	for i := 0; i < b.N; i++ {
-		m.HammingVariants1(2)
-	}
-}
-
-func BenchmarkHammingVariants3(b *testing.B) {
-	m := bio.DNA8("CATGTCGCA")
-	for i := 0; i < b.N; i++ {
-		m.HammingVariants(3)
-	}
-}
-
-func BenchmarkVarNeighbors3(b *testing.B) {
-	m := bio.DNA8("CATGTCGCA")
-	for i := 0; i < b.N; i++ {
-		m.HammingVariants1(3)
-	}
-}
-
-func BenchmarkHammingVariants4(b *testing.B) {
-	m := bio.DNA8("CATGTCGCA")
-	for i := 0; i < b.N; i++ {
-		m.HammingVariants(4)
-	}
-}
-
-func BenchmarkVarNeighbors4(b *testing.B) {
-	m := bio.DNA8("CATGTCGCA")
-	for i := 0; i < b.N; i++ {
-		m.HammingVariants1(4)
-	}
-}
-
-func BenchmarkHammingVariants5(b *testing.B) {
-	m := bio.DNA8("CATGTCGCA")
-	for i := 0; i < b.N; i++ {
-		m.HammingVariants(5)
-	}
-}
-
-func BenchmarkVarNeighbors5(b *testing.B) {
-	m := bio.DNA8("CATGTCGCA")
-	for i := 0; i < b.N; i++ {
-		m.HammingVariants1(5)
 	}
 }
 
