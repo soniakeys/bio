@@ -434,6 +434,8 @@ func (p FracProfile) MostProbKmers(l []DNA8) Kmers {
 //
 // That is, for each result kmer in r, there will be a kmer within
 // hamming distance d in each string of samples.
+//
+// Reference Compeau 2014, p. 87, Algorithm "MotifEnumeration".
 func (samples DNA8List) HammingMotifs(k, d int) []DNA8 {
 	// by the book...
 	Patterns := map[string]DNA8{}

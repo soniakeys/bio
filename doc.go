@@ -34,4 +34,13 @@
 // Yes, T and U are the same, 10.  In some cases this bit pattern is exploited
 // for efficiency, in other cases this base order is maintained just for
 // consistency within the library.
+//
+// Reference implementations
+//
+// Much of the code in this library is experimental or derived from coursework
+// exercises.  Some though is implemented from pseudocode in published sources.
+// This code will be commented with one of the following references:
+//
+// Compeau 2014: Bioinformatics Algorithms, An Active Learning Approach,
+// Phillip Compeau and Pavel Pevzner, Active Learning Publishers, 2014.
 package bio
