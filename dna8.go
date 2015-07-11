@@ -3,6 +3,8 @@
 
 package bio
 
+import "math/big"
+
 // DNA8 type represents a sequence of upper or lower case DNA symbols.
 //
 // Allowed symbols are the eight symbols ACTGactg.  Methods on the type
@@ -233,14 +235,33 @@ func (s DNA8) MinGCSkew() (m []int) {
 	return
 }
 
-// HammingVariants returns a list of all DNA k-mers within hamming distance h
-// of receiver kmer k.  Case is preserved by position.
-func (k DNA8) HammingVariants(h int) Kmers {
-	// recursive, but minimizes allocations
-	if h == 0 {
-		return Kmers{append(DNA8{}, k...)}
+// NumHammingVariants computes the expected length of the result of
+// DNA8.HammingVariants.
+func NumHammingVariants(k, d int) *big.Int {
+	if d > k {
+		d = k
 	}
-	v := Kmers{append(DNA8{}, k...)}
+	k64 := int64(k)
+	d64 := int64(d)
+	three := big.NewInt(3)
+	p3 := big.NewInt(1) // a power of 3
+	sum := big.NewInt(1)
+	var b big.Int
+	for h := int64(1); h <= d64; h++ {
+		b.Binomial(k64, h)
+		sum.Add(sum, b.Mul(&b, p3.Mul(p3, three)))
+	}
+	return sum
+}
+
+// HammingVariants returns a list of all DNA k-mers within hamming distance d
+// of receiver kmer k.  Case is preserved by position.
+func (kmer DNA8) HammingVariants(d int) Kmers {
+	// recursive, but minimizes allocations
+	if d == 0 {
+		return Kmers{append(DNA8{}, kmer...)}
+	}
+	v := Kmers{append(DNA8{}, kmer...)}
 	const sym = "A C T G"
 	var f func(DNA8, int)
 	f = func(t DNA8, h int) {
@@ -253,7 +274,7 @@ func (k DNA8) HammingVariants(h int) Kmers {
 					vb += 2
 				}
 				sub[0] = sym[vb] | b&32
-				v = append(v, append(DNA8{}, k...))
+				v = append(v, append(DNA8{}, kmer...))
 				if h > 1 && len(sub) > 1 {
 					f(sub[1:], h-1)
 				}
@@ -262,7 +283,7 @@ func (k DNA8) HammingVariants(h int) Kmers {
 			sub[0] = b
 		}
 	}
-	f(k, h)
+	f(kmer, d)
 	return v
 }
 

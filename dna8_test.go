@@ -211,6 +211,16 @@ func ExampleDNA8_HammingVariants() {
 	// Acg
 }
 
+func ExampleNumHammingVariants() {
+	fmt.Println(bio.NumHammingVariants(3, 1))
+	fmt.Println(bio.NumHammingVariants(9, 3))
+	fmt.Println(bio.NumHammingVariants(1000, 10))
+	// Output:
+	// 10
+	// 2620
+	// 15606547544311956375154416076
+}
+
 func ExampleDNA8_ModalHammingKmers() {
 	s := bio.DNA8("aacaagcataaacattaaagag")
 	for _, k := range s.ModalHammingKmers(5, 1) {
@@ -314,7 +324,7 @@ func ExampleTiTvRatio8() {
 
 func TestHammingVariants(t *testing.T) {
 	// for a few test cases, tests that HammingVariants result matches
-	// HammingVariantsRef
+	// HammingVariantsRef and test that len is as expected.
 	tcs := []struct {
 		kmer string
 		d    int
@@ -331,6 +341,11 @@ func TestHammingVariants(t *testing.T) {
 		sort.Sort(bio.DNA8List(got))
 		if !reflect.DeepEqual(ref, got) {
 			t.Fatalf("tc %v", tc)
+		}
+		// test len
+		want := bio.NumHammingVariants(len(tc.kmer), tc.d).Int64()
+		if len(ref) != int(want) {
+			t.Fatalf("len tc %v = %d, want %d", tc, len(ref), want)
 		}
 	}
 }
