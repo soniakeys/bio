@@ -3,10 +3,50 @@ package bio_test
 import (
 	"bytes"
 	"fmt"
+	"reflect"
+	"sort"
 	"testing"
 
 	"github.com/soniakeys/bio"
 )
+
+func ExampleDNA8_Cmp() {
+	fmt.Println("Rule 1, sequence length:")
+	for _, tc := range []struct{ s, t string }{
+		{"a", "a"},
+		{"a", "aa"},
+		{"aa", "a"},
+	} {
+		fmt.Println(tc.s, tc.t, bio.DNA8(tc.s).Cmp(bio.DNA8(tc.t)))
+	}
+	fmt.Println("Rule 2, base order:")
+	for _, tc := range []struct{ s, t string }{
+		{"t", "g"}, // order is package-typical ACTG
+		{"a", "C"}, // different bases compare case-insensitve.
+		{"A", "c"},
+	} {
+		fmt.Println(tc.s, tc.t, bio.DNA8(tc.s).Cmp(bio.DNA8(tc.t)))
+	}
+	fmt.Println("Rule 3, case breaks ties:")
+	for _, tc := range []struct{ s, t string }{
+		{"a", "A"},
+		{"A", "a"},
+	} {
+		fmt.Println(tc.s, tc.t, bio.DNA8(tc.s).Cmp(bio.DNA8(tc.t)))
+	}
+	// Output:
+	// Rule 1, sequence length:
+	// a a 0
+	// a aa -1
+	// aa a 1
+	// Rule 2, base order:
+	// t g -1
+	// a C -1
+	// A c -1
+	// Rule 3, case breaks ties:
+	// a A -1
+	// A a 1
+}
 
 func BenchmarkHammingVariantsRef(b *testing.B) {
 	m := bio.DNA8("CATGTCGCA")
@@ -153,7 +193,9 @@ func ExampleDNA8_PalFindAllIndex() {
 }
 
 func ExampleDNA8_HammingVariants() {
-	for _, v := range bio.DNA8("Act").HammingVariants(1) {
+	seq := bio.DNA8("Act")
+	vars := seq.HammingVariants(1)
+	for _, v := range vars {
 		fmt.Println(v)
 	}
 	// Output:
@@ -268,4 +310,27 @@ func ExampleTiTvRatio8() {
 	fmt.Printf("%.3f\n", bio.TiTvRatio8(s, t))
 	// Output:
 	// 0.667
+}
+
+func TestHammingVariants(t *testing.T) {
+	// for a few test cases, tests that HammingVariants result matches
+	// HammingVariantsRef
+	tcs := []struct {
+		kmer string
+		d    int
+	}{
+		{"actg", 0},
+		{"Act", 1},
+		{"cGG", 2},
+		{"atacaga", 3},
+	}
+	for _, tc := range tcs {
+		ref := bio.DNA8(tc.kmer).HammingVariantsRef(tc.d)
+		sort.Sort(bio.DNA8List(ref))
+		got := bio.DNA8(tc.kmer).HammingVariants(tc.d)
+		sort.Sort(bio.DNA8List(got))
+		if !reflect.DeepEqual(ref, got) {
+			t.Fatalf("tc %v", tc)
+		}
+	}
 }

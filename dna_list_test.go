@@ -3,9 +3,51 @@ package bio_test
 import (
 	"fmt"
 	"math"
+	"sort"
 
 	"github.com/soniakeys/bio"
 )
+
+func ExampleDNA8List() {
+	l := bio.DNA8List{
+		bio.DNA8("aAcCtTgG"),
+		bio.DNA8("a"),
+		bio.DNA8("actg"),
+		bio.DNA8("aCtg"),
+		bio.DNA8("acTg"),
+		bio.DNA8("acgt"),
+	}
+	sort.Sort(l)
+	for _, seq := range l {
+		fmt.Println(seq)
+	}
+	// Output:
+	// a
+	// actg
+	// acTg
+	// acgt
+	// aCtg
+	// aAcCtTgG
+}
+
+func ExampleKmers() {
+	k := bio.Kmers{
+		bio.DNA8("actg"),
+		bio.DNA8("aCtg"),
+		bio.DNA8("acTg"),
+		bio.DNA8("acgt"),
+	}
+	l := bio.DNA8List(k)
+	sort.Sort(l)
+	for _, seq := range l {
+		fmt.Println(seq)
+	}
+	// Output:
+	// actg
+	// acTg
+	// acgt
+	// aCtg
+}
 
 func ExampleKmers_Entropy() {
 	k := bio.Kmers{

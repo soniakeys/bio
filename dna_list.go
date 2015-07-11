@@ -11,6 +11,8 @@ import (
 )
 
 // DNA8List is a general purpose list of DNA8 strings.
+//
+// It implements sort.Interface.
 type DNA8List []DNA8
 
 // Kmers is a list of DNA8 strings all the same length.
@@ -18,7 +20,13 @@ type DNA8List []DNA8
 // Methods on the type may require a non-empty list.  Panic or nonsense may
 // result from calling methods on an empty list or a list with unequal length
 // strings.  Test with method Uniform where this is important.
+//
+// Note that a simple type conversion will convert between Kmers and DNA8List.
 type Kmers []DNA8
+
+func (l DNA8List) Len() int           { return len(l) }
+func (l DNA8List) Less(i, j int) bool { return l[i].Cmp(l[j]) < 0 }
+func (l DNA8List) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
 
 // Uniform returns true if receiver list x is is non-empty and contains strings
 // all the same length.

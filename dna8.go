@@ -15,6 +15,45 @@ func (s DNA8) String() string {
 	return string(s)
 }
 
+// Cmp is a comparison function, suitable for sorting.
+//
+// Rules:
+//
+// 1. A shorter sequence is < a longer sequence.
+//
+// 2. The order of bases is ACTG.
+//
+// 3. A lower case base is < the upper case of the same base.
+//
+// 4. As usual for the DNA8 type, results for non-DNA8 data are undefined.
+//
+// Returns -1 for s < t, 0 for s == t, 1 for s > t
+func (s DNA8) Cmp(t DNA8) int {
+	// rule 1:
+	switch {
+	case len(s) < len(t):
+		return -1
+	case len(s) > len(t):
+		return 1
+	}
+	for i, si := range s {
+		ti := t[i]
+		switch {
+		// rule 2:
+		case si&6 < ti&6:
+			return -1
+		case si&6 > ti&6:
+			return 1
+		// rule 3:
+		case si < ti:
+			return 1
+		case si > ti:
+			return -1
+		}
+	}
+	return 0
+}
+
 // AllIndex finds all occurrences of a motif in a sequence.
 //
 // Returned is a list of indexes of all occurrences of motif m in sequence s,
@@ -196,9 +235,12 @@ func (s DNA8) MinGCSkew() (m []int) {
 
 // HammingVariants returns a list of all DNA k-mers within hamming distance h
 // of receiver kmer k.  Case is preserved by position.
-func (k DNA8) HammingVariants(h int) []DNA8 {
+func (k DNA8) HammingVariants(h int) Kmers {
 	// recursive, but minimizes allocations
-	v := []DNA8{append(DNA8{}, k...)}
+	if h == 0 {
+		return Kmers{append(DNA8{}, k...)}
+	}
+	v := Kmers{append(DNA8{}, k...)}
 	const sym = "A C T G"
 	var f func(DNA8, int)
 	f = func(t DNA8, h int) {
@@ -225,28 +267,28 @@ func (k DNA8) HammingVariants(h int) []DNA8 {
 }
 
 // HammingVariants1.  Same result, different algorithm.
-func (kmer DNA8) HammingVariantsRef(d int) []DNA8 {
+func (kmer DNA8) HammingVariantsRef(d int) Kmers {
 	// "by the book."  well, except it's improved to preserve case by position.
 	// churns memory a bit.
 	if d == 0 {
-		return []DNA8{append(DNA8{}, kmer...)}
+		return Kmers{append(DNA8{}, kmer...)}
 	}
 	if len(kmer) == 1 {
 		b := kmer[0]
 		c := b & LCBit
-		return []DNA8{
+		return Kmers{
 			DNA8{'A' | c},
 			DNA8{'C' | c},
 			DNA8{'T' | c},
 			DNA8{'G' | c},
 		}
 	}
-	var nd []DNA8
+	var nd Kmers
 	suf := kmer[1:]
 	c := kmer[0] & LCBit
 	for _, txt := range suf.HammingVariants(d) {
 		if suf.Hamming(txt) < d {
-			for _, b := range []byte("ACTG") {
+			for _, b := range DNA8("ACTG") {
 				nd = append(nd, append(DNA8{b | c}, txt...))
 			}
 		} else {
