@@ -708,6 +708,17 @@ func (l DNA8List) ConvergedRandomMotifs(k int) (motifs Kmers, hamming int) {
 	}
 }
 
+// MapKey returns a suitable value for using a kmer list as a map key.
+//
+// The value is simply a string of the concatentation of the kmers.
+func (m Kmers) MapKey() string {
+	s := ""
+	for _, seq := range m {
+		s += string(seq)
+	}
+	return s
+}
+
 // RandomMotifSearch calls ConvergedRandomMotifs repeatedly, keeping a list
 // of the most conserved sets found.
 //
@@ -725,22 +736,15 @@ func (l DNA8List) RandomMotifSearch(k, N int) (motifs []Kmers, hamming int) {
 	if m == nil {
 		return nil, 0
 	}
-	key := func(m Kmers) string {
-		s := ""
-		for _, seq := range m {
-			s += string(seq)
-		}
-		return s
-	}
-	set := map[string]Kmers{key(m): m}
+	set := map[string]Kmers{m.MapKey(): m}
 	min := h
 	for i := 1; i < N; i++ {
 		switch m, h := l.ConvergedRandomMotifs(k); {
 		case h < min:
 			min = h
-			set = map[string]Kmers{key(m): m}
+			set = map[string]Kmers{m.MapKey(): m}
 		case h == min:
-			set[key(m)] = m
+			set[m.MapKey()] = m
 		}
 	}
 	motifs = make([]Kmers, len(set))
@@ -771,17 +775,33 @@ func RandWeighted(weights []float64) (n int) {
 	return len(weights) - 1
 }
 
-func (l DNA8List) MaxLen() (m int) {
+// MaxLen returns the maximum length of any string in receiver list l.
+//
+// It returns -1 if l is empty.
+func (l DNA8List) MaxLen() int {
+	m := -1
 	for _, s := range l {
 		if len(s) > m {
 			m = len(s)
 		}
 	}
-	return
+	return m
 }
 
+// GibbsSampler returns a set of well conserved kmers and the consensus
+// hamming distance.
+//
+// Argument N is an iteration count.  The function is missing a convergence
+// test and simply iterates N times, returning the best set of kmers found.
+//
+// Returns (nil, 0) if any sequence of l has length < k.
+//
+// Reference Compeau 2014, p. 114, Algorithm "GibbsSampler".
 func (l DNA8List) GibbsSampler(k, N int) (motifs Kmers, hamming int) {
 	motifs = l.RandomKmers(k)
+	if motifs == nil {
+		return nil, 0
+	}
 	hamming = motifs.ConsensusHamming()
 	m := append(Kmers{}, motifs...)
 	p := make([]float64, l.MaxLen()-k+1)
@@ -804,14 +824,39 @@ func (l DNA8List) GibbsSampler(k, N int) (motifs Kmers, hamming int) {
 	return
 }
 
-func (l DNA8List) GibbsMotifSearch(k, N, M int) (motifs Kmers) {
-	min := k * len(l)
-	for i := 0; i < M; i++ {
-		m, h := l.GibbsSampler(k, N)
-		if h < min {
+// GibbsMotifSearch calls GibbsSampler repeatedly, keeping a list
+// of the most conserved sets found.
+//
+// It calls GibbsSampler(k, N) M times, accumulating a set of unique kmer
+// lists having minimal consensus hamming distance.
+//
+// Returns a list of kmer lists and the minimal distance.
+//
+// Returns (nil, 0) if M < 1 or if any string in l has length < k.
+func (l DNA8List) GibbsMotifSearch(k, N, M int) (motifs []Kmers, hamming int) {
+	if M < 1 {
+		return nil, 0
+	}
+	m, h := l.GibbsSampler(k, N)
+	if m == nil {
+		return nil, 0
+	}
+	set := map[string]Kmers{m.MapKey(): m}
+	min := h
+	for i := 1; i < N; i++ {
+		switch m, h := l.GibbsSampler(k, N); {
+		case h < min:
 			min = h
-			motifs = m
+			set = map[string]Kmers{m.MapKey(): m}
+		case h == min:
+			set[m.MapKey()] = m
 		}
 	}
-	return
+	motifs = make([]Kmers, len(set))
+	i := 0
+	for _, m := range set {
+		motifs[i] = m
+		i++
+	}
+	return motifs, min
 }

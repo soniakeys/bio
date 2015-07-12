@@ -176,3 +176,28 @@ func ExampleDNA8List_RandomMotifSearch() {
 	// Output:
 	// [[TCTCGGGG CCAAGGTG TACAGGCG TTCAGGTG TCCACGTG]] 9
 }
+
+func ExampleDNA8List_GibbsMotifSearch() {
+	d := bio.DNA8List{
+		bio.DNA8("CGCCCCTCTCGGGGGTGTTCAGTAAACGGCCA"),
+		bio.DNA8("GGGCGAGGTATGTGTAAGTGCCAAGGTGCCAG"),
+		bio.DNA8("TAGTACCGAGACCGAAAGAAGTATACAGGCGT"),
+		bio.DNA8("TAGATCAAGTTTCAGGTGCACGTCGGTGAACC"),
+		bio.DNA8("AATCCACCAGCTCCACGTGCAATGTTGGCCTA"),
+	}
+	ks, h := d.GibbsMotifSearch(8, 100, 20)
+	fmt.Println(h)
+	// (sort text for predictable output)
+	s := make([]string, len(ks))
+	for i, k := range ks {
+		s[i] = fmt.Sprint(k)
+	}
+	sort.Strings(s)
+	for _, k := range s {
+		fmt.Println(k)
+	}
+	// Output:
+	// 9
+	// [AACGGCCA AAGTGCCA TAGTACCG AAGTTTCA ACGTGCAA]
+	// [TCTCGGGG CCAAGGTG TACAGGCG TTCAGGTG TCCACGTG]
+}
