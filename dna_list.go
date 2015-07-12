@@ -24,9 +24,14 @@ type DNA8List []DNA8
 // Note that a simple type conversion will convert between Kmers and DNA8List.
 type Kmers []DNA8
 
-func (l DNA8List) Len() int           { return len(l) }
+// Len implements a method of sort.Interface.
+func (l DNA8List) Len() int { return len(l) }
+
+// Less implements a method of sort.Interface.
 func (l DNA8List) Less(i, j int) bool { return l[i].Cmp(l[j]) < 0 }
-func (l DNA8List) Swap(i, j int)      { l[i], l[j] = l[j], l[i] }
+
+// Swap implements a method of sort.Interface.
+func (l DNA8List) Swap(i, j int) { l[i], l[j] = l[j], l[i] }
 
 // Uniform returns true if receiver list x is is non-empty and contains strings
 // all the same length.
@@ -658,17 +663,38 @@ func (l DNA8List) GreedyMotifSearch(k int) (c []Kmers, hamming int) {
 	return c, bestScore
 }
 
+// RandomKmers picks a kmer of length k at a random position from each string
+// in receiver list l.
+//
+// Returned kmers are slices, not copies.
+//
+// Returns nil if any string in l has length < k.
 func (l DNA8List) RandomKmers(k int) Kmers {
 	kmers := make(Kmers, len(l))
 	for i, s := range l {
+		if len(s) < k {
+			return nil
+		}
 		j := rand.Intn(len(s) - k + 1)
 		kmers[i] = s[j : j+k]
 	}
 	return kmers
 }
 
+// ConvergedRandomMotifs finds a set of well conserved kmers, one from each
+// string in receiver list .
+//
+// The algorithm starts with random kmers then converges to a local minimum
+// by Kmers.ConsensusHamming.  It returns the converged kmers and the
+// consensus hamming distance. It returns (nil, 0) if any string in l
+// has length < k.
+//
+// Reference Compeau 2014, p. 108, Algorithm "RandomizedMotifSearch".
 func (l DNA8List) ConvergedRandomMotifs(k int) (motifs Kmers, hamming int) {
 	motifs = l.RandomKmers(k)
+	if motifs == nil {
+		return nil, 0
+	}
 	hamming = motifs.ConsensusHamming()
 	// then converge
 	for {
@@ -682,16 +708,48 @@ func (l DNA8List) ConvergedRandomMotifs(k int) (motifs Kmers, hamming int) {
 	}
 }
 
-func (l DNA8List) RandomMotifSearch(k, N int) (motifs Kmers) {
-	min := k * len(l)
-	for i := 0; i < N; i++ {
-		m, h := l.ConvergedRandomMotifs(k)
-		if h < min {
+// RandomMotifSearch calls ConvergedRandomMotifs repeatedly, keeping a list
+// of the most conserved sets found.
+//
+// It runs ConvergedRandomMotifs N times, accumulating a set of unique kmer
+// lists having minimal consensus hamming distance.
+//
+// Returns a list of kmer lists and the minimal distance.
+//
+// Returns (nil, 0) if N < 1 or if any string in l has length < k.
+func (l DNA8List) RandomMotifSearch(k, N int) (motifs []Kmers, hamming int) {
+	if N < 1 {
+		return nil, 0
+	}
+	m, h := l.ConvergedRandomMotifs(k)
+	if m == nil {
+		return nil, 0
+	}
+	key := func(m Kmers) string {
+		s := ""
+		for _, seq := range m {
+			s += string(seq)
+		}
+		return s
+	}
+	set := map[string]Kmers{key(m): m}
+	min := h
+	for i := 1; i < N; i++ {
+		switch m, h := l.ConvergedRandomMotifs(k); {
+		case h < min:
 			min = h
-			motifs = m
+			set = map[string]Kmers{key(m): m}
+		case h == min:
+			set[key(m)] = m
 		}
 	}
-	return
+	motifs = make([]Kmers, len(set))
+	i := 0
+	for _, m := range set {
+		motifs[i] = m
+		i++
+	}
+	return motifs, min
 }
 
 // RandWeighted returns an int >= 0 and < len(weights)
