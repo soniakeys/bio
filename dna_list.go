@@ -587,23 +587,28 @@ u:
 // Returned is a list of all motifs found with minimum MotifHamming.
 // Also returned is the corresponding minimum MotifHamming cumulative distance.
 //
+// Reference Compeau 2014, p. 97, Algorithm "MedianString".
+//
 // The algorithm is brute force and practical only when k is small.
 func (l DNA8List) MedianMotifs(k int) (m Kmers, hamming int) {
-	hamming = k * len(l)
-	p0 := l[0][:k]
-	for p := append(DNA8{}, p0...); ; {
+	if k < 0 {
+		return
+	}
+	hamming = k * len(l) // maximum possible distance
+	if k > 31 {
+		return
+	}
+	p := DNA8(bytes.Repeat([]byte{'A'}, k)) // a "zero" kmer
+	n := int64(1) << (2 * uint(k))
+	for i := int64(0); i < n; i++ {
 		switch h := l.MotifHamming(p); {
 		case h < hamming:
 			hamming = h
 			m = Kmers{append(DNA8{}, p...)}
 		case h == hamming:
 			m = append(m, append(DNA8{}, p...))
-		default:
 		}
 		p.Inc()
-		if bytes.Equal(p, p0) {
-			break
-		}
 	}
 	return
 }

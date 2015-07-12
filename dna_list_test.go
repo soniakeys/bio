@@ -137,3 +137,16 @@ func ExampleFracProfile_RelativeEntropy() {
 	// Output:
 	// 6.44
 }
+
+func ExampleMedianMotifs() {
+	d := bio.DNA8List{
+		bio.DNA8("AAATTGACGCAT"),
+		bio.DNA8("GACGACCACGTT"),
+		bio.DNA8("CGTCAGCGCCTG"),
+		bio.DNA8("GCTGAGCACCGG"),
+		bio.DNA8("AGTTCGGGACAG"),
+	}
+	fmt.Println(d.MedianMotifs(3))
+	// Output:
+	// [GAC] 2
+}
