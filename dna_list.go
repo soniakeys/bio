@@ -73,7 +73,7 @@ func (x Kmers) Uniform() bool {
 // DNA8List.HammingMotifs  brute force over kmers present
 // DNA8List.HammingMotifs1 brute force over kmers present
 // DNA8List.HammingMotifs2 brute force over kmers present
-// DNA8List.MedianMotifs,  brute force over all possible kmers
+// DNA8List.MedianMotifs   brute force over all possible kmers
 // DNA8List.GreedyMotifSearch
 // DNA8List.RandomMotifSearch
 // DNA8List.GibbsMotifSearch
@@ -589,6 +589,9 @@ u:
 //
 // Reference Compeau 2014, p. 97, Algorithm "MedianString".
 //
+// While the reference algorithm returns only a single string, the code here
+// collects and returns all median motifs.
+//
 // The algorithm is brute force and practical only when k is small.
 func (l DNA8List) MedianMotifs(k int) (m Kmers, hamming int) {
 	if k < 0 {
@@ -613,11 +616,24 @@ func (l DNA8List) MedianMotifs(k int) (m Kmers, hamming int) {
 	return
 }
 
-func (l DNA8List) GreedyMotifSearch(k int) (m Kmers) {
+// GreedyMotifSearch returns kmers, one from each of the strings in l, where
+// the kmers have good consensus (by the method DNA8List.ConsensusHamming.)
+//
+// Returned is actually a list of these lists, where lists tie for the best
+// consensus.  The kmers returned are slices of the receiver list, not copies.
+//
+// Reference Compeau 2014, p. 100, Algorithm "GreedyMotifSearch".
+//
+// The implementation here uses a Laplace profile, and while the reference
+// algorithm returns only a single list of kmers, the code here
+// collects and returns all tying kmer lists.  Also returned is the consensus
+// Hamming distance.
+func (l DNA8List) GreedyMotifSearch(k int) (c []Kmers, hamming int) {
 	bestMotifs := make(Kmers, len(l))
 	for i, s := range l {
 		bestMotifs[i] = s[:k]
 	}
+	c = []Kmers{bestMotifs}
 	bestScore := bestMotifs.ConsensusHamming()
 	motifs := make(Kmers, len(l))
 	s0 := l[0]
@@ -628,12 +644,18 @@ func (l DNA8List) GreedyMotifSearch(k int) (m Kmers) {
 			p := motifs[:i].LaplaceProfile()
 			motifs[i] = p.MostProbKmer(l[i])
 		}
-		if s := motifs.ConsensusHamming(); s < bestScore {
+		switch s := motifs.ConsensusHamming(); {
+		case s < bestScore:
 			bestScore = s
 			copy(bestMotifs, motifs)
+			c = []Kmers{bestMotifs}
+		case s == bestScore:
+			k := make(Kmers, len(l))
+			copy(k, motifs)
+			c = append(c, k)
 		}
 	}
-	return bestMotifs
+	return c, bestScore
 }
 
 func (l DNA8List) RandomKmers(k int) Kmers {

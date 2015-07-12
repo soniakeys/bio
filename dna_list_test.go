@@ -150,3 +150,16 @@ func ExampleMedianMotifs() {
 	// Output:
 	// [GAC] 2
 }
+
+func ExampleDNA8List_GreedyMotifSearch() {
+	d := bio.DNA8List{
+		bio.DNA8("GGCGTTCAGGCA"),
+		bio.DNA8("AAGAATCAGTCA"),
+		bio.DNA8("CAAGGAGTTCGC"),
+		bio.DNA8("CACGTCAATCAC"),
+		bio.DNA8("CAATAATATTCG"),
+	}
+	fmt.Println(d.GreedyMotifSearch(3))
+	// Output:
+	// [[TTC ATC TTC ATC TTC] [TCA TCA TCG TCA TCG] [CAG CAG CAA CAA CAA]] 2
+}
