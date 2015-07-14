@@ -3,6 +3,7 @@ package logo
 import (
 	"bytes"
 	"fmt"
+	"math"
 	"strconv"
 
 	"github.com/ajstarks/svgo"
@@ -153,9 +154,17 @@ func Motif(p [][4]float64, options ...func(*Config)) []byte {
 	x = cf.SideMargin
 	sx := float64(cf.ColWidth) / 12
 	for _, dist := range p {
-		y := float64(cf.TopMargin)
+		e := 0.
+		for _, fr := range dist {
+			if fr > 0 {
+				e -= fr * math.Log2(fr)
+			}
+		}
+		e *= .5
+		iHt := (1 - e) * float64(cf.ColHeight)
+		y := float64(cf.TopMargin) + float64(cf.ColHeight)*e
 		for bx, fr := range dist {
-			bHt := float64(cf.ColHeight) * fr
+			bHt := iHt * fr
 			y += bHt
 			s.Gtransform(fmt.Sprintf("translate(%d,%d) scale(%.2f,%.2f)",
 				x, int(y), sx, bHt/12))
