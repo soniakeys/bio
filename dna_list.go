@@ -84,19 +84,28 @@ func (x Kmers) Uniform() bool {
 // DNA8List.GibbsMotifSearch
 //----------------------------------------------------------------------------
 
-// DNAConsensus returns a consensus sequence from multiple sequences.
+// DNAConsensus returns a consensus sequence and conservation count from
+// multiple DNA sequences.
 //
+// Result "cs" is the consensus sequence.
 // Consensus in each position is the most frequent base in that
 // position.  If, for a given position, a base does not appear in any sequence,
-// a '-' is emitted.  Input sequences should be of the same lengths, but the
+// a '-' is emitted.
+//
+// Result "conservation" is the sum of occurrences of the consensus base at
+// each position over the consensus sequence.  Maximum possible count is
+// len(c) * len(c[0]), which would happen if all sequences were identical.
+//
+// Returns nil, 0 if receiver is empty or if first sequence is empty.
+//
+// Input sequences should be of the same lengths, but the
 // result will be the length of the first sequence.  Sequences shorter or
 // longer than the first are allowed, any excess length being ignored.  While
 // the function is case insensitive, the result is returned as upper case.
 //
-// Score is the sum of occurrences of the consensus base at each position
-// over the sequence.  Maximum possible score is len(c) * len(c[0]), which
-// would happen if all sequences were identical.
-func DNAConsensus(c []DNA) (seq DNA, score int) {
+// See CountProfile.Consensus, Kmers.Consensus.  In comparison this function
+// properly ignores non-DNA symbols.
+func DNAConsensus(c []DNA) (cs DNA, conservation int) {
 	if len(c) == 0 {
 		return
 	}
@@ -105,9 +114,9 @@ func DNAConsensus(c []DNA) (seq DNA, score int) {
 		return
 	}
 	const bases = "A C T G"
-	r := make(DNA, len(s))
+	cs = make(DNA, len(s))
 	// compute position by position, without constructing profile matrix
-	for i := range r {
+	for i := range cs {
 		// profile
 		var n [7]int
 		for _, s := range c {
@@ -131,31 +140,41 @@ func DNAConsensus(c []DNA) (seq DNA, score int) {
 		}
 		// (see DNA8 version)
 		if max > 0 {
-			r[i] = bases[maxb]
-			score += max
+			cs[i] = bases[maxb]
+			conservation += max
 		} else {
-			r[i] = '-'
+			cs[i] = '-'
 		}
 	}
-	return r, score
+	return
 }
 
-// Consensus generates a consensus string from receiver Kmers c.
+// Consensus generates a consensus sequence and conservation count from
+// receiver Kmers c.
 //
-// Consensus in each position is simply the most frequent base in that
-// position.  Input sequences should be of the same lengths, but the result
-// will be the length of the first sequence.  Sequences shorter or longer
-// than the first are allowed, any excess length being ignored.  While the
-// function is case insensitive, the result is returned as upper case.
+// Result "cs" is the consensus sequence.  Consensus in each position is
+// the most frequent base in that position.
 //
-// Score is the sum of occurrences of the consensus base at each position
-// over the sequence.  Maximum possible score is len(c) * len(c[0]), which
-// would happen if all sequences were identical.
-func (c Kmers) Consensus() (seq DNA8, score int) {
+// Result "conservation" is the sum of occurrences of the consensus base at
+// each position over the consensus sequence.  Maximum possible conservation
+// count is len(c) * len(c[0]), which would happen if all sequences were
+// identical.
+//
+// Returns nil, 0 if receiver is empty or if first kmer is empty.
+//
+// See DNAConsensus, CountProfile.Consensus.  In comparison, this function
+// is efficient for the DNA8 type.
+func (c Kmers) Consensus() (cs DNA8, conservation int) {
+	if len(c) == 0 {
+		return
+	}
 	s := c[0]
-	r := make(DNA8, len(s))
+	if len(s) == 0 {
+		return
+	}
+	cs = make(DNA8, len(s))
 	// compute position by position, without constructing profile matrix
-	for i := range r {
+	for i := range cs {
 		// profile single position
 		var n [7]int
 		for _, s := range c {
@@ -174,10 +193,10 @@ func (c Kmers) Consensus() (seq DNA8, score int) {
 			}
 		}
 		// (compare to DNA version)
-		r[i] = "A C T G"[maxb]
-		score += max
+		cs[i] = "A C T G"[maxb]
+		conservation += max
 	}
-	return r, score
+	return
 }
 
 // ConsensusHamming is the cumulative sum of hamming distances between the
@@ -281,27 +300,35 @@ func (p CountProfile) Add(s DNA) {
 	}
 }
 
-// Consensus returns a consensus string and count from a populated CountProfile.
+// Consensus returns a consensus string and conservation count from a
+// populated CountProfile.
 //
-// If all base counts are zero in a particular position,
-// a '-' is emitted in that position in the consensus result.
+// Result "cs" is a consensus string.  If all base counts are zero in a
+// particular position, a '-' is emitted in that position in the result.
 //
-// The result 'count' is the sum of consensus counts.  (Note this is the
-// opposite sense from that returned by Kmers.ConsensusHamming.  This returns
-// a measure of match, Kmers.ConsensusHamming returns a measure of mismatch.)
-func (pm CountProfile) Consensus() (cs DNA, count int) {
+// Result "conservation" is a positive measure of consensus.
+// It is the sum of consensus counts.  (Note this is the opposite sense
+// from that returned by Kmers.ConsensusHamming.  This returns a measure of
+// match, Kmers.ConsensusHamming returns a measure of mismatch.)
+//
+// Reference: Jones 2004, p. 97, defines the function "Score" which returns
+// the "conservation" return value here.
+//
+// See also DNAConsensus, Kmers.Consensus.  In comparison, this method
+// is fastest if the CountProfile already exists.
+func (pm CountProfile) Consensus() (cs DNA, conservation int) {
 	cs = make(DNA, len(pm))
 	for x := range cs {
-		c := byte('-') // consensus symbol
-		fc := 0        // freq of consensus symbol
+		cf := 0 // freq of consensus symbol
+		cx := 4 // index of consensus symbol
 		for bx, f := range pm[x] {
-			if f > fc {
-				c = "ACTG"[bx]
-				fc = f
+			if f > cf {
+				cf = f
+				cx = bx
 			}
 		}
-		cs[x] = c
-		count += fc
+		cs[x] = "ACTG-"[cx]
+		conservation += cf
 	}
 	return
 }
@@ -689,7 +716,9 @@ func (l DNA8List) RandomKmers(k int) Kmers {
 // consensus hamming distance. It returns (nil, 0) if any string in l
 // has length < k.
 //
-// Reference Compeau 2014, p. 108, Algorithm "RandomizedMotifSearch".
+// References:
+//    Jones 2004, p. 412, Algorithm "GreedyProfileMotifSearch".
+//    Compeau 2014, p. 108, Algorithm "RandomizedMotifSearch".
 func (l DNA8List) ConvergedRandomMotifs(k int) (motifs Kmers, hamming int) {
 	motifs = l.RandomKmers(k)
 	if motifs == nil {
@@ -796,7 +825,9 @@ func (l DNA8List) MaxLen() int {
 //
 // Returns (nil, 0) if any sequence of l has length < k.
 //
-// Reference Compeau 2014, p. 114, Algorithm "GibbsSampler".
+// References:
+//    Jones 2004, p. 413.
+//    Compeau 2014, p. 114, Algorithm "GibbsSampler".
 func (l DNA8List) GibbsSampler(k, N int) (motifs Kmers, hamming int) {
 	motifs = l.RandomKmers(k)
 	if motifs == nil {

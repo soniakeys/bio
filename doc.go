@@ -41,6 +41,9 @@
 // exercises.  Some though is implemented from pseudocode in published sources.
 // This code will be commented with one of the following references:
 //
+// Jones 2004: An Introduction to Bioinformatics Algorithms, Neil C. Jones
+// and Pavel A. Pevzner, MIT Press, 2004.
+//
 // Compeau 2014: Bioinformatics Algorithms, An Active Learning Approach,
 // Phillip Compeau and Pavel Pevzner, Active Learning Publishers, 2014.
 package bio
