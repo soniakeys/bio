@@ -300,18 +300,15 @@ func ExampleDNA8_KmersNearestMotif() {
 
 func ExampleDNA8_Inc() {
 	m := bio.DNA8("ggt")
-	fmt.Println(m)
-	m.Inc()
-	fmt.Println(m)
-	m.Inc()
-	fmt.Println(m)
-	m.Inc()
-	fmt.Println(m)
+	fmt.Println("Initial motif:", m)
+	fmt.Printf("Inc returns %5t, new motif: %s\n", m.Inc(), m)
+	fmt.Printf("Inc returns %5t, new motif: %s\n", m.Inc(), m)
+	fmt.Printf("Inc returns %5t, new motif: %s\n", m.Inc(), m)
 	// Output:
-	// ggt
-	// ggg
-	// aaa
-	// aac
+	// Initial motif: ggt
+	// Inc returns  true, new motif: ggg
+	// Inc returns false, new motif: aaa
+	// Inc returns  true, new motif: aac
 }
 
 func ExampleTiTvRatio8() {

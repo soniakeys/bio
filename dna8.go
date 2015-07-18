@@ -549,17 +549,46 @@ func (m DNA8) KmersNearestMotif(s DNA8) (k []DNA8) {
 }
 
 // Inc "increments" a kmer, for the purpose of iterating over all possible
-// kmers.  The symbol order is ACTG.  A string of all Gs rolls over to
-// all As.
-func (m DNA8) Inc() {
+// kmers.  The symbol order is ACTG.  Sequences < all Gs increment and return
+// true.  A sequence of all Gs rolls over to all As and returns false.
+func (m DNA8) Inc() bool {
 	for i := len(m) - 1; i >= 0; i-- {
 		b := m[i]
 		if n := b & 6; n < 6 {
 			m[i] = "C T G"[n] | b&LCBit
-			return
+			return true
 		}
 		m[i] = 'A' | b&LCBit
 	}
+	return false
+}
+
+// nextVertex and bypass are used by DNAList.MedianMotifsB.  They seem a
+// little quirky and hard to explain so they're not exported for now.
+func (a DNA8) nextVertex(i int) int {
+	if i < len(a) {
+		a[i] = 'A' | a[i]&LCBit
+		return i + 1
+	}
+	for j := len(a) - 1; j >= 0; j-- {
+		b := a[j]
+		if n := b & 6; n < 6 {
+			a[j] = "C T G"[n] | b&LCBit
+			return j + 1
+		}
+	}
+	return 0
+}
+
+func (a DNA8) bypass(i int) int {
+	for j := i - 1; j >= 0; j-- {
+		b := a[j]
+		if n := b & 6; n < 6 {
+			a[j] = "C T G"[n] | b&LCBit
+			return j + 1
+		}
+	}
+	return 0
 }
 
 // TiTvRatio8 compultes the transition to transversion ratio of two

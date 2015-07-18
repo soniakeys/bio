@@ -633,9 +633,7 @@ func (l DNA8List) MedianMotifs(k int) (m Kmers, hamming int) {
 	if k > 31 {
 		return
 	}
-	p := DNA8(bytes.Repeat([]byte{'A'}, k)) // a "zero" kmer
-	n := int64(1) << (2 * uint(k))
-	for i := int64(0); i < n; i++ {
+	for p := DNA8(bytes.Repeat([]byte{'A'}, k)); ; { // a "zero" kmer
 		switch h := l.MotifHamming(p); {
 		case h < hamming:
 			hamming = h
@@ -643,7 +641,48 @@ func (l DNA8List) MedianMotifs(k int) (m Kmers, hamming int) {
 		case h == hamming:
 			m = append(m, append(DNA8{}, p...))
 		}
-		p.Inc()
+		if !p.Inc() {
+			return
+		}
+	}
+}
+
+// MedianMotifsB returns a list of kmers that are at minimum cumulative
+// distance (by the method DNA8List.MotifHamming) to a list of strings l.
+//
+// Result is identical to that of MedianMotifs, but the algorithm here uses
+// a branch and bound strategy that improves average performance.
+//
+// Returned is a list of all motifs found with minimum MotifHamming.
+// Also returned is the corresponding minimum MotifHamming cumulative distance.
+//
+// Reference Jones 2004, p. 114, Algorithm "BranchAndBoundMedianStringSearch".
+func (l DNA8List) MedianMotifsB(k int) (m Kmers, hamming int) {
+	if k < 0 {
+		return
+	}
+	hamming = k * len(l) // maximum possible distance
+	if k > 31 {
+		return
+	}
+	kmer := DNA8(bytes.Repeat([]byte{'A'}, k)) // the "zero" kmer
+	for i := 1; i > 0; {
+		h := l.MotifHamming(kmer[:i])
+		if i < k {
+			if h > hamming {
+				i = kmer.bypass(i)
+				continue
+			}
+		} else {
+			switch {
+			case h < hamming:
+				hamming = h
+				m = Kmers{append(DNA8{}, kmer...)}
+			case h == hamming:
+				m = append(m, append(DNA8{}, kmer...))
+			}
+		}
+		i = kmer.nextVertex(i)
 	}
 	return
 }
