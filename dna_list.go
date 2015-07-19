@@ -5,7 +5,6 @@ package bio
 
 import (
 	"bytes"
-	"fmt"
 	"math"
 	"math/rand"
 )
@@ -75,11 +74,14 @@ func (x Kmers) Uniform() bool {
 //----------------------------------------------------------------------------
 // Motif finding synopsis
 //
-// DNA8List.HammingMotifs  brute force over kmers present
-// DNA8List.HammingMotifs1 brute force over kmers present
-// DNA8List.HammingMotifs2 brute force over kmers present
-// DNA8List.MedianMotifs   brute force over all possible kmers
-// DNA8List.GreedyMotifSearch
+// DNA8List.PlantedMotifs     "Implanted motif problem", exact solutions
+// DNA8List.PlantedMotifs1
+// DNA8List.PlantedMotifs2
+// DNA8List.PlantedMotifsPSM1
+//
+// DNA8List.MedianMotifs      "Motif finding problem", an exact solution
+//
+// DNA8List.GreedyMotifSearch "Motif finding problem", approximate solutions
 // DNA8List.RandomMotifSearch
 // DNA8List.GibbsMotifSearch
 //----------------------------------------------------------------------------
@@ -469,14 +471,14 @@ func (p FracProfile) MostProbKmers(l []DNA8) Kmers {
 	return m
 }
 
-// HammingMotifs finds a list of motifs of length k that appear within
+// PlantedMotifs finds a list of motifs of length k that appear within
 // hamming distance d in each string in samples.
 //
 // That is, for each result kmer in r, there will be a kmer within
 // hamming distance d in each string of samples.
 //
 // Reference Compeau 2014, p. 87, Algorithm "MotifEnumeration".
-func (samples DNA8List) HammingMotifs(k, d int) []DNA8 {
+func (samples DNA8List) PlantedMotifs(k, d int) []DNA8 {
 	// by the book...
 	Patterns := map[string]DNA8{}
 	for _, seq := range samples {
@@ -500,8 +502,9 @@ func (samples DNA8List) HammingMotifs(k, d int) []DNA8 {
 	return r
 }
 
-// HammingMotifs1.  Same result, different algorithm.
-func (samples DNA8List) HammingMotifs1(k, d int) (r []string) {
+// PlantedMotifs1.  Same result.  Experimental ideas, but the algorithm
+// turned out rather slow.
+func (samples DNA8List) PlantedMotifs1(k, d int) (r []string) {
 	// collect unique kmers
 	uk := map[string]struct{}{}
 	for _, d := range samples {
@@ -547,8 +550,8 @@ l1:
 	return
 }
 
-// HammingMotifs2.  Same result, different algorithm.
-func (samples DNA8List) HammingMotifs2(k, d int) (r []string) {
+// PlantedMotifs2.  Same result.  Better speed.
+func (samples DNA8List) PlantedMotifs2(k, d int) (r []string) {
 	type kset map[string]struct{}
 	// dna neigbors, list parallel to dna
 	// dnbs[i] is set of unique neighbors over all kmers of dna[i]
@@ -563,7 +566,6 @@ func (samples DNA8List) HammingMotifs2(k, d int) (r []string) {
 	// val is neighbors of kmer
 	uknbs := map[string][]string{}
 	for n, seq := range samples {
-		fmt.Println("seq", n, ":", seq[:10], "...")
 		// unique kmers over the current sequence
 		uk := kset{}
 		// unique neigbors over the current sequence
@@ -575,7 +577,6 @@ func (samples DNA8List) HammingMotifs2(k, d int) (r []string) {
 			if _, ok := uk[kmer]; ok {
 				continue
 			}
-			fmt.Println("   new kmer this seq:", kmer)
 			// first time kmer seen this seq
 			uk[kmer] = struct{}{}
 			nbs, ok := uknbs[kmer]
@@ -611,6 +612,22 @@ u:
 		r = append(r, u)
 	}
 	return
+}
+
+// Planted MotifsPMS1.  Return type a little different but equivalent result.
+//
+// Reference Rajasekaran 2004, algorithm "PMS1A".
+func (l DNA8List) PlantedMotifsPMS1(k, d int) map[string]struct{} {
+	i := l[0].UniqueHammingKmers(k, d)
+	for _, s := range l[1:] {
+		k := s.UniqueHammingKmers(k, d)
+		for v := range i {
+			if _, ok := k[v]; !ok {
+				delete(i, v)
+			}
+		}
+	}
+	return i
 }
 
 // MedianMotifs returns a list of kmers that are at minimum cumulative distance

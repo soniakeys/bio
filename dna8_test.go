@@ -210,6 +210,22 @@ func ExampleDNA8_HammingVariants() {
 	// Acc
 	// Acg
 }
+func ExampleHammingVariantStrings() {
+	for _, v := range bio.HammingVariantStrings("Act", 1, nil) {
+		fmt.Println(v)
+	}
+	// Output:
+	// Act
+	// Cct
+	// Tct
+	// Gct
+	// Aat
+	// Att
+	// Agt
+	// Aca
+	// Acc
+	// Acg
+}
 
 func ExampleNumHammingVariants() {
 	fmt.Println(bio.NumHammingVariants(3, 1))
@@ -345,4 +361,67 @@ func TestHammingVariants(t *testing.T) {
 			t.Fatalf("len tc %v = %d, want %d", tc, len(ref), want)
 		}
 	}
+}
+
+func ExampleDNA8_UniqueKmers() {
+	s := bio.DNA8("Atatatatag")
+	u := s.UniqueKmers(3)
+	// (sort for predictable output)
+	o := make([]string, len(u))
+	i := 0
+	for k := range u {
+		o[i] = k
+		i++
+	}
+	sort.Strings(o)
+	for _, k := range o {
+		fmt.Println(k)
+	}
+	// Output:
+	// ATA
+	// TAG
+	// TAT
+}
+
+func ExampleDNA8_UniqueHammingKmers() {
+	s := bio.DNA8("Atatatatag")
+	u := s.UniqueHammingKmers(3, 1)
+	// (sort for predictable output)
+	o := make([]string, len(u))
+	i := 0
+	for k := range u {
+		o[i] = k
+		i++
+	}
+	sort.Strings(o)
+	for _, k := range o {
+		fmt.Println(k)
+	}
+	// Output:
+	// AAA
+	// AAG
+	// AAT
+	// ACA
+	// AGA
+	// ATA
+	// ATC
+	// ATG
+	// ATT
+	// CAG
+	// CAT
+	// CTA
+	// GAG
+	// GAT
+	// GTA
+	// TAA
+	// TAC
+	// TAG
+	// TAT
+	// TCG
+	// TCT
+	// TGG
+	// TGT
+	// TTA
+	// TTG
+	// TTT
 }

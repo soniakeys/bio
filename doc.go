@@ -44,6 +44,9 @@
 // Jones 2004: An Introduction to Bioinformatics Algorithms, Neil C. Jones
 // and Pavel A. Pevzner, MIT Press, 2004.
 //
+// Rajasekaran 2005: "Exact Algorithms for Planted Motif Problems",
+// Sanguthevar Rajasekaran, Journal of Computational Biology, 2005
+//
 // Compeau 2014: Bioinformatics Algorithms, An Active Learning Approach,
 // Phillip Compeau and Pavel Pevzner, Active Learning Publishers, 2014.
 package bio

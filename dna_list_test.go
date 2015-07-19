@@ -139,7 +139,37 @@ func ExampleFracProfile_RelativeEntropy() {
 	// 6.44
 }
 
-func ExampleMedianMotifs() {
+func ExampleDNA8List_PlantedMotifsPMS1() {
+	d := bio.DNA8List{
+		bio.DNA8("AAATTGACGCAT"),
+		bio.DNA8("GACGACCACGTT"),
+		bio.DNA8("CGTCAGCGCCTG"),
+		bio.DNA8("GCTGAGCACCGG"),
+		bio.DNA8("AGTTCGGGACAG"),
+	}
+	for m := range d.PlantedMotifsPMS1(4, 1) {
+		fmt.Println(m)
+	}
+	// Output:
+	// GCAC
+}
+
+func ExampleDNA8List_PlantedMotifs() {
+	d := bio.DNA8List{
+		bio.DNA8("AAATTGACGCAT"),
+		bio.DNA8("GACGACCACGTT"),
+		bio.DNA8("CGTCAGCGCCTG"),
+		bio.DNA8("GCTGAGCACCGG"),
+		bio.DNA8("AGTTCGGGACAG"),
+	}
+	for _, m := range d.PlantedMotifs(4, 1) {
+		fmt.Println(m)
+	}
+	// Output:
+	// GCAC
+}
+
+func ExampleDNA8List_MedianMotifs() {
 	d := bio.DNA8List{
 		bio.DNA8("AAATTGACGCAT"),
 		bio.DNA8("GACGACCACGTT"),
@@ -225,5 +255,48 @@ func BenchmarkMedian(b *testing.B) {
 func BenchmarkMedianB(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		m10.MedianMotifsB(6)
+	}
+}
+
+/* 4 1
+var plants = bio.DNA8List{
+	bio.DNA8("AAATTGACGCAT"),
+	bio.DNA8("GACGACCACGTT"),
+	bio.DNA8("CGTCAGCGCCTG"),
+	bio.DNA8("GCTGAGCACCGG"),
+	bio.DNA8("AGTTCGGGACAG"),
+}
+*/
+
+var plants = bio.DNA8List{
+	bio.DNA8("TCTGAGCTTGCGTTATTTTTAGACC"),
+	bio.DNA8("GTTTGACGGGAACCCGACGCCTATA"),
+	bio.DNA8("TTTTAGATTTCCTCAGTCCACTATA"),
+	bio.DNA8("CTTACAATTTCGTTATTTATCTAAT"),
+	bio.DNA8("CAGTAGGAATAGCCACTTTGTTGTA"),
+	bio.DNA8("AAATCCATTAAGGAAAGACGACCGT"),
+}
+
+func BenchmarkPlantedMotifs(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		plants.PlantedMotifs(5, 2)
+	}
+}
+
+func BenchmarkPlantedMotifs1(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		plants.PlantedMotifs1(5, 2)
+	}
+}
+
+func BenchmarkPlantedMotifs2(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		plants.PlantedMotifs2(5, 2)
+	}
+}
+
+func BenchmarkPlantedMotifsPMS1(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		plants.PlantedMotifsPMS1(5, 2)
 	}
 }
