@@ -268,7 +268,7 @@ func ExampleDNA8_Hamming() {
 	// 2
 }
 
-func ExampleDNA8_MotifSeqDist() {
+func ExampleDNA8_MotifHamming() {
 	m := bio.DNA8("caa")
 	s := bio.DNA8("gtgaaactt")
 	fmt.Println(s.MotifHamming(m))
@@ -276,7 +276,7 @@ func ExampleDNA8_MotifSeqDist() {
 	// 1
 }
 
-func ExampleDNA8_MotifSetDist() {
+func ExampleDNA8List_MotifHamming() {
 	m := bio.DNA8("caa")
 	l := bio.DNA8List{
 		bio.DNA8("gtgaaactt"),

@@ -507,6 +507,7 @@ func (s DNA8) Hamming(t DNA8) (d int) {
 	return
 }
 
+/*
 // MotifHamming returns the minimum hamming distance from motif m
 // to any same length kmer in sequence s.
 func (s DNA8) MotifHamming(m DNA8) int {
@@ -515,6 +516,26 @@ func (s DNA8) MotifHamming(m DNA8) int {
 		if h := m.Hamming(s[i:j]); h < min {
 			min = h
 		}
+	}
+	return min
+}
+*/
+// MotifHamming returns the minimum hamming distance from motif m
+// to any same length kmer in sequence s.
+func (s DNA8) MotifHamming(m DNA8) int {
+	min := len(m)
+pos:
+	for i, j := 0, len(m); j <= len(s); i, j = i+1, j+1 {
+		h := 0
+		for i, b := range s[i:j] {
+			if m[i] != b {
+				if h == min {
+					continue pos
+				}
+				h++
+			}
+		}
+		min = h
 	}
 	return min
 }
