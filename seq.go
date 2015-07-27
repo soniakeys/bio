@@ -6,7 +6,6 @@ package bio
 import (
 	"bytes"
 	"regexp"
-	"sort"
 	"strings"
 )
 
@@ -207,12 +206,15 @@ func (s Seq) HammingAllIndex(d int, m Seq) (x []int) {
 	return
 }
 
-func KmerComposition(k int, s string) []string {
-	c := make([]string, len(s)-k+1)
+// KmerComposition returns the frequency of kmers occurring in s.
+//
+// Compare to DNA8.FreqArray which also computes kmer frequencies.  Most
+// significantly, KmerComposition can handle large values of k.
+func KmerComposition(k int, s string) map[string]int {
+	c := map[string]int{}
 	for i, j := 0, k; j <= len(s); i, j = i+1, j+1 {
-		c[i] = s[i:j]
+		c[s[i:j]]++
 	}
-	sort.Strings(c)
 	return c
 }
 

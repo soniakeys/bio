@@ -66,3 +66,47 @@ func ExampleSeq_ToLower() {
 	// Output:
 	// aggct-ac?
 }
+
+func ExampleKmerComposition_k2() {
+	c := bio.KmerComposition(2, "ACGCGGCTCTGAAA")
+	// (sort for uniform output)
+	u := make([]string, len(c))
+	i := 0
+	for k := range c {
+		u[i] = k
+		i++
+	}
+	sort.Strings(u)
+	for _, k := range u {
+		fmt.Println(k, c[k])
+	}
+	// Output:
+	// AA 2
+	// AC 1
+	// CG 2
+	// CT 2
+	// GA 1
+	// GC 2
+	// GG 1
+	// TC 1
+	// TG 1
+}
+
+func ExampleKmerComposition_k5() {
+	c := bio.KmerComposition(5, "ATATATAG")
+	// (sort for uniform output)
+	u := make([]string, len(c))
+	i := 0
+	for k := range c {
+		u[i] = k
+		i++
+	}
+	sort.Strings(u)
+	for _, k := range u {
+		fmt.Println(k, c[k])
+	}
+	// Output:
+	// ATATA 2
+	// TATAG 1
+	// TATAT 1
+}

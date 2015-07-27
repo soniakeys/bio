@@ -124,6 +124,14 @@ func strDNA8(n int64, k int) DNA8 {
 	return a
 }
 
+// FreqArray constructs a "frequency array" representing frequencies of kmers
+// occurring in s.
+//
+// The returned slice will have length 4^k representing frequencies of kmers
+// in lexicographic order where the alphabet order is ACTG.
+//
+// Compare to function KmerComposition which also computes kmer frequencies.
+// Freq array is somewhat more efficient but only practical with small k.
 func (s DNA8) FreqArray(k int) []int {
 	a := make([]int, 1<<(2*uint(k)))
 	mask := int64(len(a) - 1)

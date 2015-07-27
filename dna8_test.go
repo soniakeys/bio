@@ -62,10 +62,17 @@ func BenchmarkHammingVariants(b *testing.B) {
 	}
 }
 
-func ExampleDNA8_FreqArray() {
+func ExampleDNA8_FreqArray_k2() {
 	fmt.Println(bio.DNA8("ACGCGGCTCTGAAA").FreqArray(2))
 	// Output:
 	// [2 1 0 0 0 0 2 2 0 1 0 1 1 2 0 1]
+}
+
+func ExampleDNA8_FreqArray_k5() {
+	f := bio.DNA8("ATATATAG").FreqArray(5)
+	fmt.Println(len(f))
+	// Output:
+	// 1024
 }
 
 func ExampleDNA8_ModalKmers() {
