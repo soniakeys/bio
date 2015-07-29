@@ -49,7 +49,11 @@ func NewSubstMatrix(a []byte, m [][]int) *SubstMatrix {
  Y -2 -2 -2 -3 -2 -1 -2 -3  2 -1 -1 -2 -1  3 -3 -2 -2  2  7 -1
  V  0 -3 -3 -3 -1 -2 -2 -3 -3  3  1 -2  1 -1 -2 -2  0 -3 -1  4
 */
-var Blosum62 *SubstMatrix
+
+var (
+	PAM250   *SubstMatrix
+	Blosum62 *SubstMatrix
+)
 
 func init() {
 	Blosum62 = NewSubstMatrix(AA20("ARNDCQEGHILKMFPSTWYV"), [][]int{
@@ -75,8 +79,6 @@ func init() {
 		{0, -3, -3, -3, -1, -2, -2, -3, -3, 3, 1, -2, 1, -1, -2, -2, 0, -3, -1, 4},
 	})
 }
-
-var PAM250 *SubstMatrix
 
 func init() {
 	PAM250 = NewSubstMatrix(AA20("ARNDCQEGHILKMFPSTWYV"), [][]int{
