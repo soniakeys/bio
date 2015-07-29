@@ -208,6 +208,8 @@ func (s Seq) HammingAllIndex(d int, m Seq) (x []int) {
 
 // KmerComposition returns the frequency of kmers occurring in s.
 //
+// Strings are indexed by byte, not rune.
+//
 // Compare to DNA8.FreqArray which also computes kmer frequencies.  Most
 // significantly, KmerComposition can handle large values of k.
 func KmerComposition(k int, s string) map[string]int {
@@ -216,6 +218,70 @@ func KmerComposition(k int, s string) map[string]int {
 		c[s[i:j]]++
 	}
 	return c
+}
+
+// KCompositionDist computes a distance metric between two strings, commonly
+// called "k-tuple distance."
+//
+// The metric does not use an alignment of the strings but instead compares
+// their kmer composition, as returned by KmerComposition.
+//
+// The result is the sum of absolute values of difference in frequency of
+// kmers occurring in the two strings.
+func KCompositionDist(k int, l, m string) (d int) {
+	c := KmerComposition(k, l)
+	for i, j := 0, k; j <= len(m); i, j = i+1, j+1 {
+		c[m[i:j]]--
+	}
+	for _, n := range c {
+		if n > 0 {
+			d += n
+		} else {
+			d -= n
+		}
+	}
+	return
+}
+
+// KCompositionDistMat computes a distance matrix for a list of strings.
+//
+// The distance metric is KCompositionDist (k-tuple distance).
+//
+// While KCompositionDist returns an integer distance, the distance matrix
+// returned here uses float64s, for easy conversion to the DistanceMatrix
+// type of package `cluster`.
+func KCompositionDistMat(k int, l []string) [][]float64 {
+	c := make([]map[string]int, len(l))
+	for i, s := range l {
+		c[i] = KmerComposition(k, s)
+	}
+	d := make([][]float64, len(l))
+	d[0] = make([]float64, len(l))
+	for i := 1; i < len(c); i++ {
+		di := make([]float64, len(l))
+		d[i] = di
+		ci := c[i]
+		for j, cj := range c[:i] {
+			sum := 0
+			for kmer, n := range ci {
+				n -= cj[kmer]
+				if n > 0 {
+					sum += n
+				} else {
+					sum -= n
+				}
+			}
+			for kmer, n := range cj {
+				if _, ok := ci[kmer]; !ok {
+					sum += n
+				}
+			}
+			f := float64(sum)
+			di[j] = f
+			d[j][i] = f
+		}
+	}
+	return d
 }
 
 // Splice removes specified sequences (introns) from a longer sequence.

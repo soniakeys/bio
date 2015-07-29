@@ -947,3 +947,38 @@ func (l DNA8List) GibbsMotifSearch(k, N, M int) (motifs []Kmers, hamming int) {
 	}
 	return motifs, min
 }
+
+// KCompositionDistMat computes a distance matrix for a DNA8List.
+//
+// The distance metric is the "k-tuple distance", the sum of absolute values
+// of difference in frequency of kmers between a pair of DNA8 sequences.
+//
+// Compare to the KCompositionDist function that operates on the string type.
+func (l DNA8List) KCompositionDistMat(k int) [][]float64 {
+	c := make([][]int, len(l))
+	for i, s := range l {
+		c[i] = s.FreqArray(k)
+	}
+	d := make([][]float64, len(l))
+	d[0] = make([]float64, len(l))
+	for i := 1; i < len(c); i++ {
+		di := make([]float64, len(l))
+		d[i] = di
+		ci := c[i]
+		for j, cj := range c[:i] {
+			sum := 0
+			for x, n := range ci {
+				n -= cj[x]
+				if n > 0 {
+					sum += n
+				} else {
+					sum -= n
+				}
+			}
+			f := float64(sum)
+			di[j] = f
+			d[j][i] = f
+		}
+	}
+	return d
+}

@@ -300,3 +300,19 @@ func BenchmarkPlantedMotifsPMS1(b *testing.B) {
 		plants.PlantedMotifsPMS1(5, 2)
 	}
 }
+
+func ExampleDNA8List_KCompositionDistMat() {
+	l := bio.DNA8List{
+		bio.DNA8("ATATATAG"),
+		bio.DNA8("ATATATA"),
+		bio.DNA8("GATATA"),
+	}
+	d := l.KCompositionDistMat(3)
+	for i, s := range l {
+		fmt.Printf("%-8s %.0f\n", s, d[i])
+	}
+	// Output:
+	// ATATATAG [0 1 4]
+	// ATATATA  [1 0 3]
+	// GATATA   [4 3 0]
+}

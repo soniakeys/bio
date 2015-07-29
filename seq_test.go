@@ -2,7 +2,9 @@ package bio_test
 
 import (
 	"fmt"
+	"reflect"
 	"sort"
+	"testing"
 
 	"github.com/soniakeys/bio"
 )
@@ -109,4 +111,54 @@ func ExampleKmerComposition_k5() {
 	// ATATA 2
 	// TATAG 1
 	// TATAT 1
+}
+
+func ExampleKCompositionDist() {
+	fmt.Println(bio.KCompositionDist(3, "ATATATAG", "GATATA"))
+	// Output:
+	// 4
+}
+
+func ExampleKCompositionDistMat() {
+	l := []string{
+		"ATATATAG",
+		"ATATATA",
+		"GATATA",
+	}
+	d := bio.KCompositionDistMat(3, l)
+	for i, s := range l {
+		fmt.Printf("%-8s %.0f\n", s, d[i])
+	}
+	// Output:
+	// ATATATAG [0 1 4]
+	// ATATATA  [1 0 3]
+	// GATATA   [4 3 0]
+}
+
+func TestKCompDist(t *testing.T) {
+	l := []string{
+		"CGGACACACAAAAAGAAAGAAGAATTTTTAGGATCTTTTGTGTGCGAATAACTATGAGGAAGATT",
+		"CGGACACACAAAAAGAAAGAAGAATTTTTAGGATCTTTTGTGTGCGAATAACTATGAGGAAGATTAA",
+		"CGGACACACAAAAAGAAAAAAGATTTTTTAAGACTTTTTGTGTACGAGTAACTATGAGGAAGATTAAC",
+	}
+	const k = 4
+	d := bio.KCompositionDistMat(k, l)
+	for i := 1; i < len(d); i++ {
+		for j := range d[:i] {
+			if d[i][j] != d[j][i] {
+				t.Fatal("not symmetric")
+			}
+			if d[i][j] != float64(bio.KCompositionDist(k, l[i], l[j])) {
+				t.Fatal("disagreement with KCompDist")
+			}
+		}
+	}
+	m := make(bio.DNA8List, len(l))
+	for i, s := range l {
+		m[i] = bio.DNA8(s)
+	}
+	e := m.KCompositionDistMat(k)
+	if !reflect.DeepEqual(d, e) {
+		t.Fatal("disagreement between KCompositionDistMat's")
+	}
 }
