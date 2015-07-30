@@ -276,17 +276,18 @@ func (kmer DNA8) HammingVariants(d int) Kmers {
 		for i := 0; i < len(t); i++ {
 			sub := t[i:]
 			b := sub[0]
-			vb := byte(0)
-			for j := 0; j < 3; j++ {
+			for vb := byte(0); ; vb += 2 {
 				if vb == b&6 {
 					vb += 2
+				}
+				if vb == 8 {
+					break
 				}
 				sub[0] = sym[vb] | b&32
 				v = append(v, append(DNA8{}, kmer...))
 				if h > 1 && len(sub) > 1 {
 					f(sub[1:], h-1)
 				}
-				vb += 2
 			}
 			sub[0] = b
 		}
