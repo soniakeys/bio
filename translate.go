@@ -123,8 +123,6 @@ var dnaStartRx = regexp.MustCompile("[Aa][Tt][Gg]")
 //
 // Returned is a collection of all unique amino acid sequences.
 func (s DNA8) TranslateORF() []AA20 {
-	// TODO binary insertion with sort.Search would be more efficient than
-	// a map here.
 	m := map[string]AA20{}
 	orf := func(s DNA8) {
 		for {
