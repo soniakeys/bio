@@ -162,3 +162,17 @@ func TestKCompDist(t *testing.T) {
 		t.Fatal("disagreement between KCompositionDistMat's")
 	}
 }
+
+func ExampleKMP_Index() {
+	k := bio.NewKMP(bio.Seq("ababaa"))
+	fmt.Println(k.Index(bio.Seq("abaababaab")))
+	// Output:
+	// 3
+}
+
+func ExampleKMP_AllIndex() {
+	k := bio.NewKMP(bio.Seq("ababaa"))
+	fmt.Println(k.AllIndex(bio.Seq("abaababaababaa")))
+	// Output:
+	// [3 8]
+}
