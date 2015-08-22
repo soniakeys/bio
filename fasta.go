@@ -16,7 +16,7 @@ import (
 // FASTASeq is a sequence annotated with a header.
 type FASTASeq struct {
 	Header string // complete header line, including '>'
-	Seq    []byte
+	Seq           // sequence, all lines concatenated
 }
 
 // ID extracts the sequence identifier from the header.
@@ -25,10 +25,22 @@ func (f FASTASeq) ID() string {
 		return ""
 	}
 	id := f.Header[1:]
-	if sp := strings.IndexByte(id, ' '); sp > 0 {
+	if sp := strings.IndexByte(id, ' '); sp >= 0 {
 		return id[:sp]
 	}
 	return id
+}
+
+// Desc extracts the description from the header.
+func (f FASTASeq) Desc() string {
+	if f.Header == "" {
+		return ""
+	}
+	id := f.Header[1:]
+	if sp := strings.IndexByte(id, ' '); sp >= 0 {
+		return id[sp+1:]
+	}
+	return ""
 }
 
 // ReadFASTA reads FASTA format from an io.Reader
@@ -66,7 +78,7 @@ func ReadFASTA(r io.Reader) (seq []FASTASeq, err error) {
 }
 
 // ReadFASTAFile is a high level function that reads an entire FASTA file
-// into memory.
+// into memory.  It calls the ReadFASTA function.
 func ReadFASTAFile(path string) ([]FASTASeq, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -84,17 +96,17 @@ type FASTAReader struct {
 	nextHeader string
 }
 
-// NewFASTAReader constructs and returns a FASTAReader around a bufio.Reader.
-func NewFASTAReader(r *bufio.Reader) FASTAReader {
-	return FASTAReader{r: r}
+// NewFASTAReader constructs and returns a FASTAReader around an io.Reader.
+func NewFASTAReader(r io.Reader) FASTAReader {
+	return FASTAReader{r: bufio.NewReader(r)}
 }
 
-// ReadSequence returns a single sequence on each call.
+// ReadSeq returns a single sequence on each call.
 //
 // A successful read is indicated by err = nil for all sequences, including
 // the last.  Subsequent calls return err = io.EOF.
 // Other error values indicate problems.
-func (r *FASTAReader) ReadSequence() (FASTASeq, error) {
+func (r *FASTAReader) ReadSeq() (FASTASeq, error) {
 	f := FASTASeq{r.nextHeader, nil}
 	r.nextHeader = ""
 	var line []byte
