@@ -290,7 +290,7 @@ func KCompositionDistMat(k int, l []string) [][]float64 {
 // The result is seq with intr sequences removed.
 //
 // The algorithm performs a simple one-time removal. It does not deal with
-//  overlapping matches or matches on the spliced sequences.
+// overlapping matches or matches on the spliced sequences.
 func (seq Seq) Splice(intr []string) Seq {
 	if len(intr) == 0 {
 		return seq
