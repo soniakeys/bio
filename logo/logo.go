@@ -9,6 +9,13 @@ import (
 	"github.com/ajstarks/svgo"
 )
 
+// First a note on why this is in a separate package.  It's to keep all the
+// config functions out of the bio package (global) namespace.  Yes, I know
+// that godoc does the nice thing of collecting them under the Config struct
+// type, but still it bugs me that they're in the package-level namespace so
+// I put the whole logo functionality in this separate package.
+
+// Config holds options for Motif()
 type Config struct {
 	TopMargin   int    // in canvas units
 	BotMargin   int    // labels are centered vertically within this space

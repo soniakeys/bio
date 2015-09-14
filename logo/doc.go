@@ -35,5 +35,6 @@
         }
      }
 */
-// Most functions in the package just set options.  See doc for Motif().
+// Most functions in the package just set options.  See doc for Motif()
+// as a starting point.
 package logo
