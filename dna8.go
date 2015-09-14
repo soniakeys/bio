@@ -98,7 +98,7 @@ ij:
 // This variant works for large k, but at the expense of allocated copy of s.
 // See ModalSmallKmers for a variant more efficent with small k.
 func (s DNA8) ModalKmers(k int) Kmers {
-	ms := ModalKmers(string(s), k) // call string version; it uses a map.
+	ms := Str(s).ModalKmers(k) // call string version; it uses a map.
 	m := make(Kmers, len(ms))
 	for i, mi := range ms {
 		m[i] = DNA8(mi)
@@ -293,46 +293,6 @@ func (kmer DNA8) HammingVariants(d int) Kmers {
 		}
 	}
 	f(kmer, d)
-	return v
-}
-
-// HammingVariantStrings computes DNA k-mers -- as strings -- within hamming
-// distance d of receiver kmer k.
-//
-// Argument kmer must have DNA8 content.
-// Like the the DNA8 version of the function, case is preserved by position.
-// Variants are appended to argument v and returned.
-// Note though that if you plan to use the variants as map keys, you probably
-// want to supply a kmer that is all the same case.
-func HammingVariantStrings(kmer string, d int, v []string) []string {
-	// recursive, but minimizes allocations
-	v = append(v, kmer)
-	if d == 0 {
-		return v
-	}
-	k8 := DNA8(kmer)
-	const sym = "A C T G"
-	var f func(DNA8, int)
-	f = func(t DNA8, h int) {
-		for i := 0; i < len(t); i++ {
-			sub := t[i:]
-			b := sub[0]
-			vb := byte(0)
-			for j := 0; j < 3; j++ {
-				if vb == b&6 {
-					vb += 2
-				}
-				sub[0] = sym[vb] | b&32
-				v = append(v, string(k8))
-				if h > 1 && len(sub) > 1 {
-					f(sub[1:], h-1)
-				}
-				vb += 2
-			}
-			sub[0] = b
-		}
-	}
-	f(k8, d)
 	return v
 }
 
@@ -754,20 +714,20 @@ func (s DNA8) PalFindAllIndex(min, max int) (p []PalIndex) {
 	return p
 }
 
-func (s DNA8) UniqueKmers(k int) map[string]struct{} {
-	t := string(Seq(s).ToUpper())
-	m := map[string]struct{}{}
+func (s DNA8) UniqueKmers(k int) map[Str]struct{} {
+	t := Str(Seq(s).ToUpper())
+	m := map[Str]struct{}{}
 	for i, j := 0, k; j <= len(t); i, j = i+1, j+1 {
 		m[t[i:j]] = struct{}{}
 	}
 	return m
 }
 
-func (s DNA8) UniqueHammingKmers(k, d int) map[string]struct{} {
-	h := map[string]struct{}{}
-	var vs []string
+func (s DNA8) UniqueHammingKmers(k, d int) map[Str]struct{} {
+	h := map[Str]struct{}{}
+	var vs StrKmers
 	for u := range s.UniqueKmers(k) {
-		vs = HammingVariantStrings(u, d, vs[:0])
+		vs = u.DNA8HammingVariants(d, vs[:0])
 		for _, v := range vs {
 			h[v] = struct{}{}
 		}

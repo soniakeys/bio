@@ -136,49 +136,6 @@ func (s Seq) AllCount(m Seq) (x int) {
 	return
 }
 
-// ModalKmers returns the most frequent k-mers in a string.
-//
-//	s is the string to search.
-//	k is the k-mer length.
-func ModalKmers(s string, k int) (m []string) {
-	f := map[string]int{}
-	max := 0
-	for i, j := 0, k; j <= len(s); i, j = i+1, j+1 {
-		kmer := s[i:j]
-		n := f[kmer] + 1
-		f[kmer] = n
-		switch {
-		case n > max:
-			m = []string{kmer}
-			max = n
-		case n == max:
-			m = append(m, kmer)
-		}
-	}
-	return
-}
-
-func KmerClumps(k, L, t int, s string) []string {
-	cs := map[string]struct{}{} // clump set. found clumps.
-	pm := map[string][]int{}    // position map. start positions by kmer.
-	w := L - k                  // window for start positions
-	for i, j := 0, k; j <= len(s); i, j = i+1, j+1 {
-		kmer := s[i:j]
-		sp := append(pm[kmer], i)
-		pm[kmer] = sp
-		if len(sp) >= t && i-sp[len(sp)-t] <= w {
-			cs[kmer] = struct{}{}
-		}
-	}
-	c := make([]string, len(cs))
-	i := 0
-	for kmer := range cs {
-		c[i] = kmer
-		i++
-	}
-	return c
-}
-
 // KmersNearestMotif returns the kmers in s having minimum hamming distance
 // from motif m.
 func (s Seq) KmersNearestMotif(m Seq) (k []Seq) {
@@ -204,84 +161,6 @@ func (s Seq) HammingAllIndex(d int, m Seq) (x []int) {
 		}
 	}
 	return
-}
-
-// KmerComposition returns the frequency of kmers occurring in s.
-//
-// Strings are indexed by byte, not rune.
-//
-// Compare to DNA8.FreqArray which also computes kmer frequencies.  Most
-// significantly, KmerComposition can handle large values of k.
-func KmerComposition(k int, s string) map[string]int {
-	c := map[string]int{}
-	for i, j := 0, k; j <= len(s); i, j = i+1, j+1 {
-		c[s[i:j]]++
-	}
-	return c
-}
-
-// KCompositionDist computes a distance metric between two strings, commonly
-// called "k-tuple distance."
-//
-// The metric does not use an alignment of the strings but instead compares
-// their kmer composition, as returned by KmerComposition.
-//
-// The result is the sum of absolute values of difference in frequency of
-// kmers occurring in the two strings.
-func KCompositionDist(k int, l, m string) (d int) {
-	c := KmerComposition(k, l)
-	for i, j := 0, k; j <= len(m); i, j = i+1, j+1 {
-		c[m[i:j]]--
-	}
-	for _, n := range c {
-		if n > 0 {
-			d += n
-		} else {
-			d -= n
-		}
-	}
-	return
-}
-
-// KCompositionDistMat computes a distance matrix for a list of strings.
-//
-// The distance metric is KCompositionDist (k-tuple distance).
-//
-// While KCompositionDist returns an integer distance, the distance matrix
-// returned here uses float64s, for easy conversion to the DistanceMatrix
-// type of package `cluster`.
-func KCompositionDistMat(k int, l []string) [][]float64 {
-	c := make([]map[string]int, len(l))
-	for i, s := range l {
-		c[i] = KmerComposition(k, s)
-	}
-	d := make([][]float64, len(l))
-	d[0] = make([]float64, len(l))
-	for i := 1; i < len(c); i++ {
-		di := make([]float64, len(l))
-		d[i] = di
-		ci := c[i]
-		for j, cj := range c[:i] {
-			sum := 0
-			for kmer, n := range ci {
-				n -= cj[kmer]
-				if n > 0 {
-					sum += n
-				} else {
-					sum -= n
-				}
-			}
-			for kmer, n := range cj {
-				if _, ok := ci[kmer]; !ok {
-					sum += n
-				}
-			}
-			f := float64(sum)
-			di[j] = f
-			d[j][i] = f
-		}
-	}
-	return d
 }
 
 // Splice removes specified sequences (introns) from a longer sequence.

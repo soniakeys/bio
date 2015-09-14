@@ -217,22 +217,6 @@ func ExampleDNA8_HammingVariants() {
 	// Acc
 	// Acg
 }
-func ExampleHammingVariantStrings() {
-	for _, v := range bio.HammingVariantStrings("Act", 1, nil) {
-		fmt.Println(v)
-	}
-	// Output:
-	// Act
-	// Cct
-	// Tct
-	// Gct
-	// Aat
-	// Att
-	// Agt
-	// Aca
-	// Acc
-	// Acg
-}
 
 func ExampleNumHammingVariants() {
 	fmt.Println(bio.NumHammingVariants(3, 1))
@@ -377,7 +361,7 @@ func ExampleDNA8_UniqueKmers() {
 	o := make([]string, len(u))
 	i := 0
 	for k := range u {
-		o[i] = k
+		o[i] = string(k)
 		i++
 	}
 	sort.Strings(o)
@@ -397,7 +381,7 @@ func ExampleDNA8_UniqueHammingKmers() {
 	o := make([]string, len(u))
 	i := 0
 	for k := range u {
-		o[i] = k
+		o[i] = string(k)
 		i++
 	}
 	sort.Strings(o)

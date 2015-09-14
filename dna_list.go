@@ -617,7 +617,7 @@ u:
 // Planted MotifsPMS1.  Return type a little different but equivalent result.
 //
 // Reference Rajasekaran 2004, algorithm "PMS1A".
-func (l DNA8List) PlantedMotifsPMS1(k, d int) map[string]struct{} {
+func (l DNA8List) PlantedMotifsPMS1(k, d int) map[Str]struct{} {
 	i := l[0].UniqueHammingKmers(k, d)
 	for _, s := range l[1:] {
 		k := s.UniqueHammingKmers(k, d)
