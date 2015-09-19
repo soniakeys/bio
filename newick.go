@@ -7,7 +7,12 @@ import (
 	"strings"
 )
 
-// NewickNode is the node type used for both rooted and unrooted trees.
+//--------------------------------------------------------------
+// Stuff below the line will be replaced.  There are better ways.
+// Prefix X added to mark things to be replaced.  Prefix changed to Z when a
+// replacement is written.  When all X's are gone, Delete all the Z's
+
+// XNewickNode is the node type used for both rooted and unrooted trees.
 //
 // Rooted trees are returned by ParseNewick and can represent any tree
 // structure indicated by the Newick string representation.  A root node
@@ -18,7 +23,7 @@ import (
 // the number of children a node may have.  There are no restrictions
 // on which nodes must have names or weights.
 //
-// An unrooted tree is returned by NewickNode.Unroot.  It is restricted
+// An unrooted tree is returned by XNewickNode.Unroot.  It is restricted
 // to be a binary tree.  The parent pointer is not used to define tree
 // structure.  Instead, structure is defined entirely with child pointers.
 // An internal node will have exactly three children.
@@ -34,21 +39,21 @@ import (
 //
 // Field P is not part of the Newick format and can be used to associate
 // arbitrary data with the node.
-type NewickNode struct {
+type XNewickNode struct {
 	Name      string
 	HasWeight bool
 	Weight    float64
-	Parent    *NewickNode
-	Children  []*NewickNode
+	Parent    *XNewickNode
+	Children  []*XNewickNode
 	P         interface{}
 }
 
 /*
-func (n *NewickNode) addChild(a *NewickNode) {
+func (n *XNewickNode) addChild(a *XNewickNode) {
 	n.Children = append(n.Children, a)
 }
 
-func (n *NewickNode) deleteChild(d *NewickNode) (ok bool) {
+func (n *XNewickNode) deleteChild(d *XNewickNode) (ok bool) {
 	for i, ch := range n.Children {
 		if ch == d {
 			last := len(n.Children) - 1
@@ -60,7 +65,7 @@ func (n *NewickNode) deleteChild(d *NewickNode) (ok bool) {
 	return false
 }
 
-func (n *NewickNode) replaceChild(oldCh, newCh *NewickNode) (ok bool) {
+func (n *XNewickNode) replaceChild(oldCh, newCh *XNewickNode) (ok bool) {
 	for i, ch := range n.Children {
 		if ch == oldCh {
 			n.Children[i] = newCh
@@ -71,15 +76,15 @@ func (n *NewickNode) replaceChild(oldCh, newCh *NewickNode) (ok bool) {
 }
 */
 
-// NewickNames represents an index from node names to node pointers.
-type NewickNames map[string]*NewickNode
+// XNewickNames represents an index from node names to node pointers.
+type XNewickNames map[string]*XNewickNode
 
 // RootedDistance returns the distance between two named nodes in a rooted
 // tree.
 //
 // The reciever must be an index into a rooted tree.
 // The distance returned is the number of edges separating the named nodes.
-func (names NewickNames) RootedDistance(name1, name2 string) (int, error) {
+func (names XNewickNames) RootedDistance(name1, name2 string) (int, error) {
 	n1, ok := names[name1]
 	if !ok {
 		return 0, fmt.Errorf("%s not in tree", name1)
@@ -91,7 +96,7 @@ func (names NewickNames) RootedDistance(name1, name2 string) (int, error) {
 	if name1 == name2 {
 		return 0, nil
 	}
-	walked := map[*NewickNode]int{}
+	walked := map[*XNewickNode]int{}
 	walked[n1] = 0
 	walked[n2] = 0
 	for d := 1; ; d++ {
@@ -121,7 +126,7 @@ func (names NewickNames) RootedDistance(name1, name2 string) (int, error) {
 // The reciever must be an index into a rooted tree with edge weights
 // The distance returned is the sum of the weights of the edge separating
 // the named nodes.
-func (names NewickNames) RootedDistanceByWeight(name1, name2 string) (float64, error) {
+func (names XNewickNames) RootedDistanceByWeight(name1, name2 string) (float64, error) {
 	n1, ok := names[name1]
 	if !ok {
 		return 0, fmt.Errorf("%s not in tree", name1)
@@ -133,8 +138,8 @@ func (names NewickNames) RootedDistanceByWeight(name1, name2 string) (float64, e
 	if name1 == name2 {
 		return 0, nil
 	}
-	part1 := map[*NewickNode]float64{n1: 0}
-	part2 := map[*NewickNode]float64{n2: 0}
+	part1 := map[*XNewickNode]float64{n1: 0}
+	part2 := map[*XNewickNode]float64{n2: 0}
 	var all1, all2 float64
 	for {
 		if n1.Parent != nil {
@@ -187,7 +192,7 @@ func (names NewickNames) RootedDistanceByWeight(name1, name2 string) (float64, e
 // Argument s must have a terminanting semicolon.  There can be nothing but
 // whitespace follwing the semicolon.
 // If argument "names" is non-nil, it is populated as well.
-func ParseNewick(s string, names NewickNames) (*NewickNode, error) {
+func XParseNewick(s string, names XNewickNames) (*XNewickNode, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return nil, errors.New("no data")
@@ -220,7 +225,7 @@ func ParseNewick(s string, names NewickNames) (*NewickNode, error) {
 type parser struct {
 	rem   string
 	tok   string
-	names NewickNames
+	names XNewickNames
 }
 
 func (p *parser) gettok() {
@@ -243,21 +248,21 @@ func (p *parser) gettok() {
 	}
 }
 
-func (p *parser) parseSubtree() (n *NewickNode, err error) {
+func (p *parser) parseSubtree() (n *XNewickNode, err error) {
 	if p.tok == "(" {
 		// internal node
 		return p.parseSet()
 	}
 	// leaf node
-	n = &NewickNode{}
+	n = &XNewickNode{}
 	if p.tok != ")" && p.tok != "," {
 		err = p.nameWeight(n)
 	}
 	return
 }
 
-func (p *parser) parseSet() (*NewickNode, error) {
-	n := &NewickNode{}
+func (p *parser) parseSet() (*XNewickNode, error) {
+	n := &XNewickNode{}
 	p.gettok() // get token after (
 	for {
 		child, err := p.parseSubtree()
@@ -286,7 +291,7 @@ func (p *parser) parseSet() (*NewickNode, error) {
 }
 
 // add name and weight to either internal or leaf node
-func (p *parser) nameWeight(n *NewickNode) (err error) {
+func (p *parser) nameWeight(n *XNewickNode) (err error) {
 	w := strings.Index(p.tok, ":")
 	if w < 0 {
 		n.Name = p.tok
@@ -307,14 +312,14 @@ func (p *parser) nameWeight(n *NewickNode) (err error) {
 	return nil
 }
 
-// String satisfies fmt.Stringer by formatting a tree of NewickNodes into
+// String satisfies fmt.Stringer by formatting a tree of XNewickNodes into
 // the Newick text format.
 //
 // Only child nodes are followed.  Passing the root of a rooted tree will
 // format the entire tree.  Passing a node under the root will format only
 // that sub tree.  In the case of an unrooted tree, any node may be passed
 // and String will format the entire tree rooted at than node.
-func (n *NewickNode) String() string {
+func (n *XNewickNode) String() string {
 	if n == nil {
 		return ";"
 	}
@@ -322,7 +327,7 @@ func (n *NewickNode) String() string {
 }
 
 // recursive stringer
-func rNewickNodeString(from, to *NewickNode) string {
+func rNewickNodeString(from, to *XNewickNode) string {
 	s := ""
 	if len(to.Children) > 0 {
 		s += "("
@@ -361,19 +366,19 @@ func rNewickNodeString(from, to *NewickNode) string {
 // Unrooted output is validated to be a binary tree.
 // Internal nodes must be unnamed, have 3 children and no parent.
 // Leaf nodes must be named, have a parent and no children.
-// The names must be unique and are returned as a NewickNames map.
+// The names must be unique and are returned as a XNewickNames map.
 // The map contains pointers to leaf nodes and the tree can be traversed
 // from there.
 //
 // Incomplete:  Not all cases are handled.  Too restrictive.  More
 // cases can be represented.
-func (root *NewickNode) Unrooted() (NewickNames, error) {
-	names := NewickNames{}
+func (root *XNewickNode) Unrooted() (XNewickNames, error) {
+	names := XNewickNames{}
 	// the case of the CTBL test data format:  a named root with one child.
 	// create node that will become leaf, convert tree as a child of this node,
 	// then move child to parent field.
 	if root.Name > "" && len(root.Children) == 1 {
-		uLeaf := &NewickNode{Name: root.Name}
+		uLeaf := &XNewickNode{Name: root.Name}
 		names[root.Name] = uLeaf
 		if err := rUnrooted(root.Children[0], uLeaf, names); err != nil {
 			return nil, err
@@ -388,7 +393,7 @@ func (root *NewickNode) Unrooted() (NewickNames, error) {
 
 // recursive parser.
 // d for the input directed node, u for result undirected node
-func rUnrooted(d *NewickNode, uIn *NewickNode, names NewickNames) error {
+func rUnrooted(d *XNewickNode, uIn *XNewickNode, names XNewickNames) error {
 	if len(d.Children) == 0 {
 		// leaf node
 		if d.Name == "" {
@@ -397,7 +402,7 @@ func rUnrooted(d *NewickNode, uIn *NewickNode, names NewickNames) error {
 		if _, exists := names[d.Name]; exists {
 			return fmt.Errorf("name %s not unique", d.Name)
 		}
-		uOut := &NewickNode{Name: d.Name, Parent: uIn}
+		uOut := &XNewickNode{Name: d.Name, Parent: uIn}
 		uIn.Children = append(uIn.Children, uOut)
 		names[d.Name] = uOut
 		return nil
@@ -409,7 +414,7 @@ func rUnrooted(d *NewickNode, uIn *NewickNode, names NewickNames) error {
 	if d.Name > "" {
 		return fmt.Errorf("named internal node: %s", d.Name)
 	}
-	uOut := &NewickNode{Children: []*NewickNode{uIn}}
+	uOut := &XNewickNode{Children: []*XNewickNode{uIn}}
 	uIn.Children = append(uIn.Children, uOut)
 	if err := rUnrooted(d.Children[0], uOut, names); err != nil {
 		return err
