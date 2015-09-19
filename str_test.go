@@ -201,3 +201,22 @@ func ExampleStrKmers_Contigs() {
 	// BCDHIJKLMN
 	// LMNO
 }
+
+func ExampleStrList_DistanceMatrix() {
+	l := bio.StrList{
+		"TTTCCATTTA",
+		"GATTCATTTC",
+		"TTTCCATTTT",
+		"GTTCCATTTA",
+	}
+	f := func(a, b bio.Str) float64 { return float64(a.Hamming(b)) }
+	m := l.DistanceMatrix(f)
+	for _, r := range m {
+		fmt.Printf("%2.0f\n", r)
+	}
+	// Output:
+	// [ 0  4  1  1]
+	// [ 4  0  4  3]
+	// [ 1  4  0  2]
+	// [ 1  3  2  0]
+}

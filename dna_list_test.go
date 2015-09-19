@@ -316,3 +316,22 @@ func ExampleDNA8List_KCompositionDistMat() {
 	// ATATATA  [1 0 3]
 	// GATATA   [4 3 0]
 }
+
+func ExampleDNA8List_DistanceMatrix() {
+	l := bio.DNA8List{
+		bio.DNA8("TTTCCATTTA"),
+		bio.DNA8("GATTCATTTC"),
+		bio.DNA8("TTTCCATTTT"),
+		bio.DNA8("GTTCCATTTA"),
+	}
+	f := func(a, b bio.DNA8) float64 { return float64(a.Hamming(b)) }
+	m := l.DistanceMatrix(f)
+	for _, r := range m {
+		fmt.Printf("%2.0f\n", r)
+	}
+	// Output:
+	// [ 0  4  1  1]
+	// [ 4  0  4  3]
+	// [ 1  4  0  2]
+	// [ 1  3  2  0]
+}

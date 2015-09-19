@@ -35,6 +35,21 @@ type StrKmers []Str
 // frequency of s in some context.
 type StrFreq map[Str]int
 
+// Hamming returns the Hamming distance between two Strs.
+// Comparison is done byte-wise and so is case sensitive.
+//
+// Strs s and t must be of equal length.
+// Panic or nonsense results if the lengths are unequal.
+func (s Str) Hamming(t Str) int {
+	h := 0
+	for i, b := range []byte(s) {
+		if b != t[i] {
+			h++
+		}
+	}
+	return h
+}
+
 // DNA8HammingVariants computes DNA k-mers -- as strings -- within hamming
 // distance d of receiver kmer k.
 //
@@ -397,4 +412,25 @@ func (kmers StrKmers) Contigs() ([]Seq, error) {
 		s[i], _ = jmers.OverlapKmers(p) // (length already checked)
 	}
 	return s, nil
+}
+
+type DistFuncStr func(Str, Str) float64
+
+// DistanceMatrix computes a distance matrix for a StrList and a DistFuncStr that
+// compares two Strs.
+func (l StrList) DistanceMatrix(f DistFuncStr) [][]float64 {
+	// code identical to DNA8List.DistanceMatrix
+	d := make([][]float64, len(l))
+	d[0] = make([]float64, len(l))
+	for i := 1; i < len(l); i++ {
+		li := l[i]
+		di := make([]float64, len(l))
+		d[i] = di
+		for j, lj := range l[:i] {
+			dij := f(li, lj)
+			di[j] = dij
+			d[j][i] = dij
+		}
+	}
+	return d
 }

@@ -948,6 +948,26 @@ func (l DNA8List) GibbsMotifSearch(k, N, M int) (motifs []Kmers, hamming int) {
 	return motifs, min
 }
 
+type DistFunc8 func(DNA8, DNA8) float64
+
+// DistanceMatrix computes a distance matrix for a DNA8List and a DistFunc8 that
+// compares two DNA8 seqs.
+func (l DNA8List) DistanceMatrix(f DistFunc8) [][]float64 {
+	d := make([][]float64, len(l))
+	d[0] = make([]float64, len(l))
+	for i := 1; i < len(l); i++ {
+		li := l[i]
+		di := make([]float64, len(l))
+		d[i] = di
+		for j, lj := range l[:i] {
+			dij := f(li, lj)
+			di[j] = dij
+			d[j][i] = dij
+		}
+	}
+	return d
+}
+
 // KCompositionDistMat computes a distance matrix for a DNA8List.
 //
 // The distance metric is the "k-tuple distance", the sum of absolute values
