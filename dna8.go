@@ -3,7 +3,11 @@
 
 package bio
 
-import "math/big"
+import (
+	"bytes"
+	"math/big"
+	"regexp"
+)
 
 // DNA8 type represents a sequence of upper or lower case DNA symbols.
 //
@@ -395,7 +399,36 @@ func (s DNA8) ModalHammingKmersRC(k, h int) (m []DNA8) {
 	return
 }
 
-// Find indexes in s where s translates to pep.  Searches all three
+// Four algorithms for AAFindAllIndex.  Typical benchmarks:
+//
+// bio $ go test -run AAFind -bench AAFind
+// PASS
+// BenchmarkAAFindAllIndex-8      	     100	  28360381 ns/op
+// BenchmarkAAFindAllIndex3-8     	      50	  27133149 ns/op
+// BenchmarkAAFindAllIndexOnline-8	      30	  37121451 ns/op
+// BenchmarkAAFindAllIndexRegexp-8	       2	 682268192 ns/op
+//
+// Benchmarks in dna8_test.go but usually commented out.
+
+// AAFindAllIndex returnes indexes in s where a substring of s or the
+// reverse complement of the substring translates to pep.
+//
+// It searches all six reading frames and includes overlaps and returns a
+// list of 0-based indexes from the start of s.  Unfortunately results are
+// not necessarily ordered and translation palindromes are included twice.
+//
+// Compared to the alternative algorithms this one is both simple and gives
+// good performance.
+func (s DNA8) AAFindAllIndex(pep AA20) []int {
+	f := s.aaFindAllIndex(pep)
+	r := s.ReverseComplement().aaFindAllIndex(pep)
+	for i, p := range r {
+		r[i] = len(s) - p - len(pep)*3
+	}
+	return append(f, r...)
+}
+
+// Helper method for AAFindAllIndex.  Searches all three
 // reading frames and finds overlaps but does not search reverse complement.
 func (s DNA8) aaFindAllIndex(pep AA20) (r []int) {
 	t := make(AA20, len(s)/3)
@@ -413,20 +446,24 @@ func (s DNA8) aaFindAllIndex(pep AA20) (r []int) {
 	return
 }
 
-// Find indexes in s where s or reverse complement of s translates to pep.
-// Searches all six reading frames, finds overlaps.  Returns 0-based indexes
-// from the start of s.
-func (s DNA8) AAFindAllIndex(pep AA20) []int {
-	f := s.aaFindAllIndex(pep)
-	r := s.ReverseComplement().aaFindAllIndex(pep)
+// AAFindAllIndex3 is an alternative algorithm for AAFindAllIndex.
+//
+// Like AAFindAllIndex, results are not necessarily in order and translation
+// palindromes are counted twice.
+//
+// The algorithm is somewhat more complex and runs only slightly faster
+// than AAFindAllIndex.
+func (s DNA8) AAFindAllIndex3(pep AA20) []int {
+	f := s.aaFindAllIndex3(pep)
+	r := s.ReverseComplement().aaFindAllIndex3(pep)
 	for i, p := range r {
 		r[i] = len(s) - p - len(pep)*3
 	}
 	return append(f, r...)
 }
 
-/* it was a little faster, but worth the extra code? i dunno
-func (s DNA8) AAFindAllIndex3(pep AA20) (r []int) {
+// helper function for AAFindAllIndex3
+func (s DNA8) aaFindAllIndex3(pep AA20) (r []int) {
 	if len(s) < 3 {
 		return
 	}
@@ -459,32 +496,80 @@ func (s DNA8) AAFindAllIndex3(pep AA20) (r []int) {
 			break
 		}
 	}
-	x0 := AllIndex(t0, pep)
+	x0 := Seq(t0).AllIndex(Seq(pep))
 	for i, p := range x0 {
 		x0[i] = p * 3
 	}
-	x1 := AllIndex(t1, pep)
+	x1 := Seq(t1).AllIndex(Seq(pep))
 	for i, p := range x1 {
 		x1[i] = p*3 + 1
 	}
-	x2 := AllIndex(t2, pep)
+	x2 := Seq(t2).AllIndex(Seq(pep))
 	for i, p := range x2 {
 		x2[i] = p*3 + 2
 	}
 	return append(x0, append(x1, x2...)...)
 }
 
-func (s DNA8) AAFindAllIndex3RC(pep AA20) []int {
-	f := s.AAFindAllIndex3(pep)
-	r := s.ReverseComplement().AAFindAllIndex3(pep)
-	for i, p := range r {
-		r[i] = len(s) - p - len(pep)*3
+// AAFindAllIndexOnline is an alternative algorithm for AAFindAllIndex.
+//
+// It is an online algorithm that makes a single pass over s and uses
+// additional memory proportional to |pep| rather than |s|.
+//
+// It has the additional advantage that the result list of indexes comes
+// out in order, and without repeating indexes of translation palindromes.
+//
+// Sadly the added complexity of the algorithm seems to leave it a little
+// (maybe 25%) slower than AAFindAllIndex.
+func (s DNA8) AAFindAllIndexOnline(pep AA20) (x []int) {
+	// algorithm: use six ring buffers, three for forward reading frames and
+	// three for reverse.  handle each codon just once, in order.  for each
+	// codon, translate to a single position in a forward ring buffer and
+	// reverse translate to a single position in a reverse ring buffer.
+	// fill all but one position in each of the six buffers as a priming step,
+	// then begin update-test cycle.  store the match if either forward or
+	// reverse buffers match the peptide.
+	var f, r [3][]byte // ring buffers for the six reading frames
+	for i := range f {
+		f[i] = make([]byte, len(pep))
+		r[i] = make([]byte, len(pep))
 	}
-	return append(f, r...)
+	p3 := 3 * len(pep) // size of window into Text
+	if p3 > len(s) {
+		return // not enough dna
+	}
+	// prime buffers.  i is start of codon being translated.
+	prEnd := p3 - 3
+	for i := 0; i < prEnd; i++ {
+		fx := i % 3             // reading frame index
+		px := i / 3             // peptide position index
+		rx := len(pep) - 1 - px // revc peptide index
+		f[fx][px] = TranslateCodon(s[i], s[i+1], s[i+2])
+		r[fx][rx] = TranslateCodonC(s[i+2], s[i+1], s[i])
+	}
+	// scan remainder of s, testing for peptide
+	sEnd := len(s) - 3
+	for i := prEnd; i <= sEnd; i++ {
+		fx := i % 3             // reading frame index
+		px := i / 3 % len(pep)  // peptide position index
+		rx := len(pep) - 1 - px // revc peptide index
+		f[fx][px] = TranslateCodon(s[i], s[i+1], s[i+2])
+		r[fx][rx] = TranslateCodonC(s[i+2], s[i+1], s[i])
+		fMatch := bytes.Equal(f[fx][px+1:], pep[:rx]) &&
+			bytes.Equal(f[fx][:px+1], pep[rx:])
+		rMatch := bytes.Equal(r[fx][:rx], pep[px+1:]) &&
+			bytes.Equal(r[fx][rx:], pep[:px+1])
+		if fMatch || rMatch {
+			x = append(x, i-prEnd)
+		}
+	}
+	return
 }
-*/
-/* interesting, but not as fast
-func (s DNA8) AAFindAllIndexRCRx(pep AA20) (r []int) {
+
+// AAFindAllIndexRegexp is an alternative algorithm to AAFindAllIndex.
+//
+// It is slower.
+func (s DNA8) AAFindAllIndexRegexp(pep AA20) (r []int) {
 	var pat, rcPat string
 	for _, aa := range pep {
 		pat += codonInvRx[aa]
@@ -503,7 +588,6 @@ func (s DNA8) AAFindAllIndexRCRx(pep AA20) (r []int) {
 	}
 	return r
 }
-*/
 
 // Hamming returns hamming distance between s and t.  Nonsense or panic
 // results if strings are unequal length.

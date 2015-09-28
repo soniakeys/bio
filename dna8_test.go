@@ -3,9 +3,13 @@ package bio_test
 import (
 	"bytes"
 	"fmt"
+	//"io/ioutil"
+	//"log"
+	//	"math/rand"
 	"reflect"
 	"sort"
 	"testing"
+	//	"time"
 
 	"github.com/soniakeys/bio"
 )
@@ -252,19 +256,34 @@ func ExampleDNA8_ModalHammingKmersRC() {
 }
 
 func ExampleDNA8_AAFindAllIndex() {
-	s := bio.DNA8("gtgaaactttttccttggtttaatcaatat")
-	p := bio.AA20("NQ")
+	s := bio.DNA8("TCCTGAACGTTTAAATGTCCAACGGCTGAACGTTCAAT")
+	p := bio.AA20("LNVQ")
 	x := s.AAFindAllIndex(p)
 	fmt.Println(x)
-
-	y := x[0]
-	fmt.Println(s[y : y+len(p)*3])
-	y = x[1]
-	fmt.Println(s[y : y+len(p)*3])
+	for _, a := range x {
+		fmt.Println(s[a : a+len(p)*3])
+	}
 	// Output:
-	// [21 14]
-	// aatcaa
-	// ttggtt
+	// [10 25 2 25]
+	// TTAAATGTCCAA
+	// CTGAACGTTCAA
+	// CTGAACGTTTAA
+	// CTGAACGTTCAA
+}
+
+func ExampleDNA8_AAFindAllIndexOnline() {
+	s := bio.DNA8("TCCTGAACGTTTAAATGTCCAACGGCTGAACGTTCAAT")
+	p := bio.AA20("LNVQ")
+	x := s.AAFindAllIndexOnline(p)
+	fmt.Println(x)
+	for _, a := range x {
+		fmt.Println(s[a : a+len(p)*3])
+	}
+	// Output:
+	// [2 10 25]
+	// CTGAACGTTTAA
+	// TTAAATGTCCAA
+	// CTGAACGTTCAA
 }
 
 func ExampleDNA8_Hamming() {
@@ -416,3 +435,74 @@ func ExampleDNA8_UniqueHammingKmers() {
 	// TTG
 	// TTT
 }
+
+/*
+var vc bio.DNA8
+
+func init() {
+	var err error
+	vc, err = ioutil.ReadFile("Vibrio_cholerae.txt")
+	if err != nil {
+		log.Print(err)
+	}
+}
+
+func TestAAFind(t *testing.T) {
+	rand.Seed(time.Now().UnixNano())
+	pep := make(bio.AA20, 4)
+	for i := 0; i < 30; i++ {
+		// random pep
+		for j := range pep {
+			pep[j] = bio.AA20Alphabet[rand.Intn(20)]
+		}
+		x := vc.AAFindAllIndex(pep)
+		t.Log(pep, len(x))
+	}
+}
+
+LSAK 78 (38 are fwd, 40 rev.)
+
+func TestAAFind(t *testing.T) {
+	want := 78
+	got := len(vc.AAFindAllIndex(bio.AA20("LSAK")))
+	if got != want {
+		t.Fatalf("AAFindAllIndex = %d, want %d", got, want)
+	}
+	got = len(vc.AAFindAllIndex3(bio.AA20("LSAK")))
+	if got != want {
+		t.Fatalf("AAFindAllIndex3 = %d, want %d", got, want)
+	}
+	got = len(vc.AAFindAllIndexOnline(bio.AA20("LSAK")))
+	if got != want {
+		t.Fatalf("AAFindAllIndexOnline = %d, want %d", got, want)
+	}
+	got = len(vc.AAFindAllIndexRegexp(bio.AA20("LSAK")))
+	if got != want {
+		t.Fatalf("AAFindAllIndexRegexp = %d, want %d", got, want)
+	}
+}
+
+func BenchmarkAAFindAllIndex(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		vc.AAFindAllIndex(bio.AA20("LSAK"))
+	}
+}
+
+func BenchmarkAAFindAllIndex3(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		vc.AAFindAllIndex3(bio.AA20("LSAK"))
+	}
+}
+
+func BenchmarkAAFindAllIndexOnline(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		vc.AAFindAllIndexOnline(bio.AA20("LSAK"))
+	}
+}
+
+func BenchmarkAAFindAllIndexRegexp(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		vc.AAFindAllIndexRegexp(bio.AA20("LSAK"))
+	}
+}
+*/

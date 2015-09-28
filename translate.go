@@ -19,7 +19,12 @@ import (
 //
 // Use the function TranslateCodon though in preference to directly indexing
 // the table.
-var CodonTable [64]byte
+//
+// CodonTableC is analogous, but indexes the complement of a codon.
+var (
+	CodonTable  [64]byte
+	CodonTableC [64]byte
+)
 
 var codonInv ['Z'][][]byte   // codons indexed by amino acid
 var codonInvRC ['Z'][][]byte // RC of codons indexed by amino acid
@@ -29,6 +34,8 @@ var codonInvRCRx ['Z']string
 func init() {
 	copy(CodonTable[:], []byte(
 		"KNNKTTTTIIIMRSSRQHHQPPPPLLLLRRRR*YY*SSSSLFFL*CCWEDDEAAAAVVVVGGGG"))
+	copy(CodonTableC[:], []byte(
+		"FLLFCW*CY**YSSSSVVVVGGGGDEEDAAAAIMIISRRSNKKNTTTTLLLLRRRRHQQHPPPP"))
 	c := DNA8("AAA")
 	var a [3]byte
 	for _, aa := range CodonTable {
@@ -66,6 +73,12 @@ func CodonIndex(b0, b1, b2 byte) int {
 // an amino acid symbol of AA20Alphabet or the stop symbol AAStop.
 func TranslateCodon(b0, b1, b2 byte) byte {
 	return CodonTable[CodonIndex(b0, b1, b2)]
+}
+
+// TranslateCodonC translates the complements of three DNA8 or RNA8 bases into
+// an amino acid symbol of AA20Alphabet or the stop symbol AAStop.
+func TranslateCodonC(b0, b1, b2 byte) byte {
+	return CodonTableC[CodonIndex(b0, b1, b2)]
 }
 
 const (
