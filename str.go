@@ -158,24 +158,6 @@ func (s Str) KmerComposition(k int) StrFreq {
 	return c
 }
 
-// KmerPairComposition generates the ideal read pair composition of a string.
-//
-// Argument k is the kmer size, d is the distance between paired kmers.
-//
-// Returned is a frequency map of pairs.  For pair p, p.A is the kmer
-// closer to the beginning of receiver string s, p.B is the kmer that follows
-// after distance d.
-func (s Str) KmerPairComposition(k, d int) map[struct{ A, B Str }]int {
-	c := map[struct{ A, B Str }]int{}
-	for i, jb := 0, k+d+k; jb <= len(s); i, jb = i+1, jb+1 {
-		c[struct{ A, B Str }{
-			s[i : i+k],
-			s[jb-k : jb],
-		}]++
-	}
-	return c
-}
-
 // KCompositionDist computes a distance metric between two strings, commonly
 // called "k-tuple distance."
 //
@@ -268,39 +250,6 @@ func (kmers StrKmers) OverlapKmers(order []int) (Seq, error) {
 		s[i] = kmers[o][0]
 	}
 	copy(s[last:], kmers[order[last]])
-	return s, nil
-}
-
-func OverlapKmerPairs(pairs []struct{ A, B string }, d int, order []int) (Seq, error) {
-	if len(order) == 0 {
-		return nil, nil
-	}
-	if len(pairs) == 0 {
-		return nil, errors.New("empty pair list")
-	}
-	k := len(pairs[0].A)
-	if k == 0 {
-		return nil, errors.New("zero length kmers")
-	}
-	for _, p := range pairs[1:] {
-		if len(p.A) != k || len(p.B) != k {
-			return nil, errors.New("kmers not all the same length")
-		}
-	}
-	if d < 0 {
-		return nil, errors.New("negative d")
-	}
-	last := len(order) - 1
-	s := make(Seq, last+k+d+k)
-	for i, o := range order[:last] {
-		s[i] = pairs[o].A[0]
-	}
-	copy(s[last:], pairs[order[last]].B)
-	d0 := last + k
-	for i, o := range order[last-d : last] {
-		s[d0+i] = pairs[o].B[0]
-	}
-	copy(s[d0+d:], pairs[order[last]].B)
 	return s, nil
 }
 

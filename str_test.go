@@ -72,29 +72,31 @@ func ExampleStr_KmerComposition_k5() {
 	// TATAT 1
 }
 
-func ExampleStr_KmerPairComposition() {
-	c := bio.Str("TAATGCCATGGGATGTT").KmerPairComposition(3, 2)
+func ExampleStr_ReadPairComposition() {
+	f := bio.Str("TAATGCCATGGGATGTT").ReadPairComposition(3, 2)
 	// sort for predictable output:
-	s := make([]string, len(c))
+	s := make([]string, len(f.Freq))
 	i := 0
-	for p, m := range c {
-		s[i] = fmt.Sprintf("%s %s %d", p.A, p.B, m)
+	for p, m := range f.Freq {
+		s[i] = fmt.Sprint(p, m)
 		i++
 	}
 	sort.Strings(s)
+	fmt.Println("d:", f.D)
 	for _, p := range s {
 		fmt.Println(p)
 	}
 	// Output:
-	// AAT CAT 1
-	// ATG ATG 2
-	// CAT GAT 1
-	// CCA GGA 1
-	// GCC GGG 1
-	// GGG GTT 1
-	// TAA CCA 1
-	// TGC TGG 1
-	// TGG TGT 1
+	// d: 2
+	// {AAT CAT} 1
+	// {ATG ATG} 2
+	// {CAT GAT} 1
+	// {CCA GGA} 1
+	// {GCC GGG} 1
+	// {GGG GTT} 1
+	// {TAA CCA} 1
+	// {TGC TGG} 1
+	// {TGG TGT} 1
 }
 
 func ExampleStr_KCompositionDist() {
