@@ -1,23 +1,22 @@
 package bio
 
 func AlignGlobal(s1, s2 Seq, a Aligner, indelPenalty int) (score int, t1, t2 Seq) {
-	s11 := len(s1) + 1
-	s21 := len(s2) + 1
+	stride := len(s2) + 1
 	// score matrix/node labels
-	s := make([]int, s11*s21)
+	s := make([]int, (len(s1)+1)*stride)
 	// backtrack matrix.  parallel to s.
 	b := make([]int, len(s))
 	// values to store in b representing gap in s1, gap in s2, and
 	// match/mismatch respectively.  these can be subtracted from a
 	// position/node number to get the previous position/node number.
 	g1 := 1
-	g2 := s21
-	mm := s21 + 1
+	g2 := stride
+	mm := stride + 1
 	// index into s, b
 	x := 0
 
 	// "top row" gap in s1 all across
-	for x = 1; x < s21; x++ {
+	for x = 1; x < stride; x++ {
 		s[x] = s[x-g1] - indelPenalty
 		b[x] = g1
 	}
@@ -55,13 +54,13 @@ func AlignGlobal(s1, s2 Seq, a Aligner, indelPenalty int) (score int, t1, t2 Seq
 		switch b[x] {
 		case g1:
 			t1 = append(t1, '-')
-			t2 = append(t2, s2[x%s21-1])
+			t2 = append(t2, s2[x%stride-1])
 		case g2:
-			t1 = append(t1, s1[x/s21-1])
+			t1 = append(t1, s1[x/stride-1])
 			t2 = append(t2, '-')
 		default:
-			t1 = append(t1, s1[x/s21-1])
-			t2 = append(t2, s2[x%s21-1])
+			t1 = append(t1, s1[x/stride-1])
+			t2 = append(t2, s2[x%stride-1])
 		}
 	}
 	last := len(t1) - 1
@@ -73,10 +72,9 @@ func AlignGlobal(s1, s2 Seq, a Aligner, indelPenalty int) (score int, t1, t2 Seq
 }
 
 func AlignLocal(s1, s2 Seq, a Aligner, indelPenalty int) (score int, t1, t2 Seq) {
-	s11 := len(s1) + 1
-	s21 := len(s2) + 1
+	stride := len(s2) + 1
 	// score matrix/node labels
-	s := make([]int, s11*s21)
+	s := make([]int, (len(s1)+1)*stride)
 	// backtrack matrix.  parallel to s.
 	b := make([]byte, len(s))
 	// values to store in b representing a choice made for a node
@@ -89,14 +87,14 @@ func AlignLocal(s1, s2 Seq, a Aligner, indelPenalty int) (score int, t1, t2 Seq)
 	// values to subtract from a position/node number to get the previous
 	// position/node number.
 	g1x := 1
-	g2x := s21
-	mmx := s21 + 1
+	g2x := stride
+	mmx := stride + 1
 
 	// index into s, b
 	x := 0
 
 	// "top row" skip prefix all across
-	for x = 1; x < s21; x++ {
+	for x = 1; x < stride; x++ {
 		b[x] = sp
 	}
 	// "lower rows"
@@ -133,37 +131,32 @@ func AlignLocal(s1, s2 Seq, a Aligner, indelPenalty int) (score int, t1, t2 Seq)
 	sLast := len(s) - 1
 	score = s[sLast] // final score
 	// well, except there's a different rule for the last node.
-	// preference goes to skipping a suffix.  to fix up the computation
-	// done so far for the last node, here compute the best suffix
-	// then use it if it's no worse than the score computed above.
-	sMax := 0 // best score
-	xMax := 0 // node number giving best score
-	for x, sx := range s[:sLast] {
-		if sx > sMax {
-			sMax = sx
-			xMax = x
+	// preference goes to skipping a suffix.  so the max score out of
+	// all of s can be picked as the last node.
+	score = 0 // accumulate best score for result
+	x = 0     // also accumulate corresponding node number
+	for xx, sx := range s[1:] {
+		if sx > score {
+			score = sx
+			x = xx
 		}
 	}
-	x = sLast // x becomes the starting point for backtracking
-	if sMax >= score {
-		score = sMax
-		x = xMax
-	}
+	// x becomes the starting point for backtracking
 	// backtrack then reverse
 bt:
 	for x > 0 {
 		switch b[x] {
 		case g1:
 			t1 = append(t1, '-')
-			t2 = append(t2, s2[x%s21-1])
+			t2 = append(t2, s2[x%stride-1])
 			x -= g1x
 		case g2:
-			t1 = append(t1, s1[x/s21-1])
+			t1 = append(t1, s1[x/stride-1])
 			t2 = append(t2, '-')
 			x -= g2x
 		case mm:
-			t1 = append(t1, s1[x/s21-1])
-			t2 = append(t2, s2[x%s21-1])
+			t1 = append(t1, s1[x/stride-1])
+			t2 = append(t2, s2[x%stride-1])
 			x -= mmx
 		default:
 			break bt
@@ -184,6 +177,10 @@ func AlignPair(mode string, s1, s2 Seq, a Aligner, indelPenalty int) (score int,
 		pa.setGlobal()
 	case "local":
 		pa.setLocal()
+	case "fitting":
+		pa.setFitting()
+	case "overlap":
+		pa.setOverlap()
 	default:
 		return -1, nil, nil
 	}
@@ -201,12 +198,10 @@ type pairAligner struct {
 	a            Aligner
 	indelPenalty int
 
-	// a few values trivially derived from parameters but assigned to
+	// a couple values trivially derived from parameters but assigned to
 	// identifier names more meaningful in certain contexts.
-	s21 int // = len(s2) + 1, stride for s, b.
-	g1x int // x increment for s1 gap, = 1
-	g2x int // x increment for s2 gap, = s21
-	mmx int // x increment for match/mismatch, = s21 + 1
+	stride int // = len(s2) + 1, stride for s, b.
+	mmx    int // x increment for match/mismatch, = stride + 1
 
 	// configuration for alignment mode
 	top, left *paRule
@@ -228,41 +223,49 @@ func newPairAligner(s1, s2 Seq, a Aligner, indelPenalty int) *pairAligner {
 	pa := &pairAligner{s1: s1, s2: s2, a: a, indelPenalty: indelPenalty}
 	pa.s = make([]int, (len(s1)+1)*(len(s2)+1))
 	pa.b = make([]btFunc, len(pa.s))
-	pa.s21 = len(s2) + 1
-	pa.g1x = 1
-	pa.g2x = pa.s21
-	pa.mmx = pa.s21 + 1
+	pa.stride = len(s2) + 1
+	pa.mmx = pa.stride + 1 // match/mismatch increment
 	return pa
 }
 
 // skip prefix rule, "free taxi ride" (free taxi from start, that is)
-func (pa *pairAligner) spScore(x int) int              { return 0 }
-func (pa *pairAligner) spBack(x int) (int, byte, byte) { return 0, 0, 0 }
+func spScore(x int) int                 { return 0 }
+func spBack(x int) (int, byte, byte)    { return 0, 0, 0 }
+func (pa *pairAligner) spRule() *paRule { return &paRule{spScore, spBack} }
 
 // gap in s2
 func (pa *pairAligner) g2Score(x int) int {
-	return pa.s[x-pa.g2x] - pa.indelPenalty
+	return pa.s[x-pa.stride] - pa.indelPenalty
 }
 func (pa *pairAligner) g2Back(x int) (int, byte, byte) {
-	return x - pa.g2x, pa.s1[x/pa.s21-1], '-'
+	return x - pa.stride, pa.s1[x/pa.stride-1], '-'
+}
+func (pa *pairAligner) g2Rule() *paRule {
+	return &paRule{pa.g2Score, pa.g2Back}
 }
 
 // gap in s1
 func (pa *pairAligner) g1Score(x int) int {
-	return pa.s[x-pa.g1x] - pa.indelPenalty
+	return pa.s[x-1] - pa.indelPenalty
 }
 func (pa *pairAligner) g1Back(x int) (int, byte, byte) {
-	return x - pa.g1x, '-', pa.s2[x%pa.s21-1]
+	return x - 1, '-', pa.s2[x%pa.stride-1]
+}
+func (pa *pairAligner) g1Rule() *paRule {
+	return &paRule{pa.g1Score, pa.g1Back}
 }
 
 // match/mismatch
 func (pa *pairAligner) mmScore(x int) int {
-	i := (x / pa.s21) - 1
-	j := (x % pa.s21) - 1
+	i := (x / pa.stride) - 1
+	j := (x % pa.stride) - 1
 	return pa.s[x-pa.mmx] + pa.a.Score(pa.s1[i], pa.s2[j])
 }
 func (pa *pairAligner) mmBack(x int) (int, byte, byte) {
-	return x - pa.mmx, pa.s1[x/pa.s21-1], pa.s2[x%pa.s21-1]
+	return x - pa.mmx, pa.s1[x/pa.stride-1], pa.s2[x%pa.stride-1]
+}
+func (pa *pairAligner) mmRule() *paRule {
+	return &paRule{pa.mmScore, pa.mmBack}
 }
 
 // initialize with method values of above method
@@ -275,16 +278,16 @@ type paRule struct {
 
 func (pa *pairAligner) setGlobal() {
 	// "top row", all gaps in s1
-	pa.top = &paRule{pa.g1Score, pa.g1Back}
+	pa.top = pa.g1Rule()
 	// "left edge", all gaps in s2
-	pa.left = &paRule{pa.g2Score, pa.g2Back}
-	// order of rules important for repeatability.
+	pa.left = pa.g2Rule()
+	// order of rules can matter.
 	// a different order may give different traces, although with
 	// the same score.
 	pa.interior = []*paRule{
-		&paRule{pa.g2Score, pa.g2Back}, // gap in s2
-		&paRule{pa.g1Score, pa.g1Back}, // gap in s1
-		&paRule{pa.mmScore, pa.mmBack}, // match/mismatch
+		pa.g2Rule(), // gap in s2
+		pa.g1Rule(), // gap in s1
+		pa.mmRule(), // match/mismatch
 	}
 	// no extra work to do except just set final result values
 	pa.final = func() {
@@ -294,35 +297,71 @@ func (pa *pairAligner) setGlobal() {
 }
 
 func (pa *pairAligner) setLocal() {
-	pa.top = &paRule{pa.spScore, pa.spBack}
-	pa.left = &paRule{pa.spScore, pa.spBack}
+	pa.top = pa.spRule()  // skip prefix
+	pa.left = pa.spRule() // skip prefix
 	pa.interior = []*paRule{
-		&paRule{pa.spScore, pa.spBack}, // skip prefix
-		&paRule{pa.g2Score, pa.g2Back}, // gap in s2
-		&paRule{pa.g1Score, pa.g1Back}, // gap in s1
-		&paRule{pa.mmScore, pa.mmBack}, // match/mismatch
+		pa.spRule(), // skip prefix
+		pa.g2Rule(), // gap in s2
+		pa.g1Rule(), // gap in s1
+		pa.mmRule(), // match/mismatch
 	}
 	pa.final = func() {
-		sLast := len(pa.s) - 1
-		// there's a different rule for the last node.
-		// preference goes to skipping a suffix.  to fix up the computation
-		// done so far for the last node, here compute the best suffix
-		// then use it if it's no worse than the score computed above.
+		// rule for the last node:
+		// preference goes to skipping a suffix.
+		// max score out of all of s becomes the last node.
 		sMax := 0 // best score
 		xMax := 0 // node number giving best score
-		for x, sx := range pa.s[:sLast] {
+		for x, sx := range pa.s[1:] {
 			if sx > sMax {
 				sMax = sx
 				xMax = x
 			}
 		}
-		pa.xLast = sLast
-		if sMax >= pa.s[sLast] {
-			pa.s[sLast] = sMax
-			pa.xLast = xMax
-		}
-		pa.score = pa.s[sLast]
+		pa.xLast = xMax
+		pa.score = sMax
 	}
+}
+
+// fit s1 (shorter seq) within s2 (longer seq)
+// so "matrix" is wider than it is tall
+func (pa *pairAligner) setFitting() {
+	pa.top = pa.spRule()  // sp, top row like local
+	pa.left = pa.g2Rule() // g2, left edge like global
+	pa.interior = []*paRule{
+		pa.g2Rule(), // gap in s2
+		pa.g1Rule(), // gap in s1
+		pa.mmRule(), // match/mismatch
+	}
+	pa.final = pa.skipS2Suffix
+}
+
+// a little method shared by setFitting and setOverlap
+func (pa *pairAligner) skipS2Suffix() {
+	// skip a suffix of s2 only.
+	// fix up is to take the best score "across the bottom"
+	xMax := len(pa.s) - pa.stride // node number giving best score
+	sMax := pa.s[xMax]            // best score
+	for x := xMax + 1; x < len(pa.s); x++ {
+		if sx := pa.s[x]; sx > sMax {
+			sMax = sx
+			xMax = x
+		}
+	}
+	pa.xLast = xMax
+	pa.score = sMax
+}
+
+// align a suffix of s1 with a prefix of s2.
+// in other words, skip a prefix of s1, skip a suffix of s2.
+func (pa *pairAligner) setOverlap() {
+	pa.top = pa.g1Rule()  // g1, top row like global
+	pa.left = pa.spRule() // sp, left edge like local
+	pa.interior = []*paRule{
+		pa.g2Rule(), // gap in s2
+		pa.g1Rule(), // gap in s1
+		pa.mmRule(), // match/mismatch
+	}
+	pa.final = pa.skipS2Suffix
 }
 
 func (pa *pairAligner) trace() (t1, t2 Seq) {
