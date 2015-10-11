@@ -222,3 +222,29 @@ func ExampleStrList_DistanceMatrix() {
 	// [ 1  4  0  2]
 	// [ 1  3  2  0]
 }
+
+func ExampleStrKmers_ReadBreak() {
+	l := bio.StrKmers{
+		"ABCDEF",
+		"CDEFGH",
+	}
+	m := l.ReadBreak(3)
+	// sort for predictable output
+	s := make([]string, len(m))
+	i := 0
+	for kmer := range m {
+		s[i] = string(kmer)
+		i++
+	}
+	sort.Strings(s)
+	for _, kmer := range s {
+		fmt.Println(kmer, m[bio.Str(kmer)])
+	}
+	// Output:
+	// ABC 1
+	// BCD 1
+	// CDE 2
+	// DEF 2
+	// EFG 1
+	// FGH 1
+}

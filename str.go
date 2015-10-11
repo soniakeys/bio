@@ -5,6 +5,7 @@ package bio
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/soniakeys/graph"
 )
@@ -16,7 +17,7 @@ import (
 // Seq type, methods are generally case sensitive.
 //
 // Often a method is written to the str type rather than a byte-based sequence
-// type because the implmentation uses maps.
+// type because the implementation uses maps.
 type Str string
 
 // StrList is a list of Strs, not necessarily of the same length.
@@ -34,6 +35,23 @@ type StrKmers []Str
 // The usual meaning is that for map m and str s, m[s] is the occurrence
 // frequency of s in some context.
 type StrFreq map[Str]int
+
+// AllIndex finds all occurrences of a motif in a string.
+//
+// Returned is a list of indexes of all occurrences of motif m in string s,
+// including overlapping ones.   Comparison is case sensitive.
+func (s Str) AllIndex(m Str) (x []int) {
+	for searched := 0; ; {
+		i := strings.Index(string(s[searched:]), string(m))
+		if i < 0 {
+			break
+		}
+		i += searched
+		x = append(x, i)
+		searched = i + 1
+	}
+	return
+}
 
 // Hamming returns the Hamming distance between two Strs.
 // Comparison is done byte-wise and so is case sensitive.
@@ -349,6 +367,16 @@ func (s Str) DeBruijn(k int) (graph [][]int, jmers StrKmers) {
 }
 
 // Contigs finds contigs in the DeBruijn graph represented by kmer list kmers.
+func (freq StrFreq) Contigs() (ps [][]int, jmers StrKmers, err error) {
+	var g graph.AdjacencyList
+	g, jmers, err = freq.DeBruijn()
+	if err != nil {
+		return
+	}
+	return g.MaximalNonBranchingPaths(), jmers, nil
+}
+
+// Contigs finds contigs in the DeBruijn graph represented by kmer list kmers.
 func (kmers StrKmers) Contigs() ([]Seq, error) {
 	var g graph.AdjacencyList
 	g, jmers, err := kmers.DeBruijn()
@@ -382,4 +410,22 @@ func (l StrList) DistanceMatrix(f DistFuncStr) [][]float64 {
 		}
 	}
 	return d
+}
+
+func (kmers StrKmers) ReadBreak(kb int) StrFreq {
+	if len(kmers) == 0 {
+		return nil
+	}
+	k := len(kmers[0])
+	if kb > k {
+		return nil
+	}
+	m := StrFreq{}
+	end := k - kb
+	for _, kmer := range kmers {
+		for i := 0; i <= end; i++ {
+			m[kmer[i:i+kb]]++
+		}
+	}
+	return m
 }
