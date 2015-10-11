@@ -477,7 +477,7 @@ func (p FracProfile) MostProbKmers(l []DNA8) Kmers {
 // That is, for each result kmer in r, there will be a kmer within
 // hamming distance d in each string of samples.
 //
-// Reference Compeau 2014, p. 87, Algorithm "MotifEnumeration".
+// Reference Compeau 2015, p. 71, Algorithm "MotifEnumeration".
 func (samples DNA8List) PlantedMotifs(k, d int) []DNA8 {
 	// by the book...
 	Patterns := map[string]DNA8{}
@@ -636,7 +636,7 @@ func (l DNA8List) PlantedMotifsPMS1(k, d int) map[Str]struct{} {
 // Returned is a list of all motifs found with minimum MotifHamming.
 // Also returned is the corresponding minimum MotifHamming cumulative distance.
 //
-// Reference Compeau 2014, p. 97, Algorithm "MedianString".
+// Reference Compeau 2015, p. 82, Algorithm "MedianString".
 //
 // While the reference algorithm returns only a single string, the code here
 // collects and returns all median motifs.
@@ -710,7 +710,7 @@ func (l DNA8List) MedianMotifsB(k int) (m Kmers, hamming int) {
 // Returned is actually a list of these lists, where lists tie for the best
 // consensus.  The kmers returned are slices of the receiver list, not copies.
 //
-// Reference Compeau 2014, p. 100, Algorithm "GreedyMotifSearch".
+// Reference Compeau 2015, p. 85, Algorithm "GreedyMotifSearch".
 //
 // The implementation here uses a Laplace profile, and while the reference
 // algorithm returns only a single list of kmers, the code here
@@ -774,7 +774,7 @@ func (l DNA8List) RandomKmers(k int) Kmers {
 //
 // References:
 //    Jones 2004, p. 412, Algorithm "GreedyProfileMotifSearch".
-//    Compeau 2014, p. 108, Algorithm "RandomizedMotifSearch".
+//    Compeau 2015, p. 93, Algorithm "RandomizedMotifSearch".
 func (l DNA8List) ConvergedRandomMotifs(k int) (motifs Kmers, hamming int) {
 	motifs = l.RandomKmers(k)
 	if motifs == nil {
@@ -883,7 +883,7 @@ func (l DNA8List) MaxLen() int {
 //
 // References:
 //    Jones 2004, p. 413.
-//    Compeau 2014, p. 114, Algorithm "GibbsSampler".
+//    Compeau 2015, p. 100, Algorithm "GibbsSampler".
 func (l DNA8List) GibbsSampler(k, N int) (motifs Kmers, hamming int) {
 	motifs = l.RandomKmers(k)
 	if motifs == nil {

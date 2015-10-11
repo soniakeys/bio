@@ -47,6 +47,7 @@
 // Rajasekaran 2005: "Exact Algorithms for Planted Motif Problems",
 // Sanguthevar Rajasekaran, Journal of Computational Biology, 2005
 //
-// Compeau 2014: Bioinformatics Algorithms, An Active Learning Approach,
-// Phillip Compeau and Pavel Pevzner, Active Learning Publishers, 2014.
+// Compeau 2015: Bioinformatics Algorithms, An Active Learning Approach,
+// 2nd ed, vol I, Phillip Compeau and Pavel Pevzner, Active Learning
+// Publishers, 2014.
 package bio
