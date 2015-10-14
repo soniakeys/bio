@@ -317,6 +317,16 @@ func (pa *pairAligner) setLocal() {
 				xMax = x
 			}
 		}
+		/* alternatively, by "columns"
+		for j := 0; j < pa.stride; j++ {
+			for x := j; x < len(pa.s); x += pa.stride {
+				if sx := pa.s[x]; sx > sMax {
+					sMax = sx
+					xMax = x
+				}
+			}
+		}
+		*/
 		pa.xLast = xMax
 		pa.score = sMax
 	}

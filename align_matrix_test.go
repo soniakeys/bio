@@ -18,10 +18,10 @@ func TestBlosum62(t *testing.T) {
 }
 
 func TestPAM250(t *testing.T) {
-	if bio.PAM250 == nil {
-		t.Fatal("PAM250 not initialized")
+	if bio.Pam250 == nil {
+		t.Fatal("Pam250 not initialized")
 	}
-	if score := bio.PAM250.LinearGap(
+	if score := bio.Pam250.LinearGap(
 		bio.AA("LYPRTEINSTRIN"),
 		bio.AA("LY---EINSTEIN"), 5); score != 23 {
 		t.Fatal("PAM250 score:", score)
