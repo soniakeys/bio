@@ -1,7 +1,7 @@
 Bio
 ===
 
-Bioinformatics alorithms implemented in Go.
+Bioinformatics algorithms implemented in Go.
 
 Code here is exploratory.  It is the work of one bioinformatics enthusiast,
 one with no background in related industry or academics.
