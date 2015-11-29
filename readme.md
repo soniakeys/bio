@@ -1,7 +1,11 @@
 Bio
 ===
 
-A library of bioinformatics alorithms.
+Bioinformatics alorithms implemented in Go.
 
-This library is published with the caution that the author has no background
-in bioinformatics.  The code here is completely exploratory at this point.
+Code here is exploratory.  It is the work of one bioinformatics enthusiast,
+one with no background in related industry or academics.
+
+Go source files contain the standard go doc format documentation for most
+exported functions.  In addition there is an overview in the Github repository
+wiki at https://github.com/soniakeys/bio/wiki.
