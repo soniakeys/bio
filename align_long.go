@@ -2,9 +2,10 @@ package bio
 
 import "strings"
 
-const GapSymbol = '-' // represents a sequence alignment gap
-
 // AlignLong does fragment assembly of long reads.
+//
+// Greedy algorithm,
+// http://en.wikipedia.org/wiki/Sequence_assembly#Greedy_algorithm.
 //
 // All fragments must be of the same length.  Overlaps of less than half
 // the fragment length are not considered, thus, it is a requirement that

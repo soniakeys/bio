@@ -176,8 +176,8 @@ var (
 	// The 18 uinique integer masses out of the 20 proteinogenic amino acids.
 	AA18Int AAInt
 
-	// look up IUPAC symbol for one of 18 integer masses.  value is '-' for
-	// all values in in AA18Int.
+	// Look up IUPAC symbol for one of 18 integer masses.
+	// Value is '-' for all values not in AA18Int.
 	AAFrom18 [AA18IntMax + 1]byte
 )
 

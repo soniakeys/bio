@@ -53,6 +53,16 @@ func (s Seq) ToUpper() Seq {
 	return r
 }
 
+// Reverse returns the reverse of a sequence.  The original is unmodified.
+func (s Seq) Reverse() Seq {
+	r := make(Seq, len(s))
+	last := len(s) - 1
+	for i, b := range s {
+		r[last-i] = b
+	}
+	return r
+}
+
 // Freq counts the frequency of all symbols appearing in a sequence.
 //
 // The returned array contains a count of each symbol appearing in the sequence.
@@ -166,19 +176,19 @@ func (s Seq) HammingAllIndex(d int, m Seq) (x []int) {
 // Splice removes specified sequences (introns) from a longer sequence.
 //
 // Argument intr is the list of sequences to remove.
-// The result is seq with intr sequences removed.
+// The result is s with intr sequences removed.
 //
 // The algorithm performs a simple one-time removal. It does not deal with
 // overlapping matches or matches on the spliced sequences.
-func (seq Seq) Splice(intr []string) Seq {
+func (s Seq) Splice(intr []string) Seq {
 	if len(intr) == 0 {
-		return seq
+		return s
 	}
 	q := make([]string, len(intr))
 	for i, t := range intr {
 		q[i] = regexp.QuoteMeta(t)
 	}
-	return regexp.MustCompile(strings.Join(q, "|")).ReplaceAllLiteral(seq, nil)
+	return regexp.MustCompile(strings.Join(q, "|")).ReplaceAllLiteral(s, nil)
 }
 
 // KMP type represents a prepocessed pattern as used by the
