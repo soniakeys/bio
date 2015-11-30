@@ -37,6 +37,14 @@ func ExampleSeq_Hamming() {
 	// 2
 }
 
+func ExampleSeq_PDistance() {
+	s := bio.Seq("AGGCTTAC")
+	t := bio.Seq("AGgCTAAC")
+	fmt.Println(s.PDistance(t))
+	// Output:
+	// 0.25
+}
+
 func ExampleSeq_AllIndex() {
 	s := bio.Seq("Atatgatatat")
 	m := bio.Seq("atat")

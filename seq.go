@@ -112,6 +112,16 @@ func (s Seq) Hamming(t Seq) int {
 	return h
 }
 
+// PDistance returns the proportional difference between two byte sequences.
+//
+// It equals the Hamming distance divided by the sequence length.
+//
+// As with the Hamming method, sequences s and t must be of equal length.
+// Panic or nonsense results if the lengths are unequal.
+func (s Seq) PDistance(t Seq) float64 {
+	return float64(s.Hamming(t)) / float64(len(s))
+}
+
 // AllIndex finds all occurrences of a motif in a sequence.
 //
 // Returned is a list of indexes of all occurrences of motif m in sequence s,

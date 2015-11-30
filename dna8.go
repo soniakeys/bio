@@ -600,6 +600,16 @@ func (s DNA8) Hamming(t DNA8) (d int) {
 	return
 }
 
+// PDistance returns the proportional difference between two byte sequences.
+//
+// It equals the Hamming distance divided by the sequence length.
+//
+// As with the Hamming method, sequences s and t must be of equal length.
+// Panic or nonsense results if the lengths are unequal.
+func (s DNA8) PDistance(t DNA8) float64 {
+	return float64(s.Hamming(t)) / float64(len(s))
+}
+
 /*
 // MotifHamming returns the minimum hamming distance from motif m
 // to any same length kmer in sequence s.
