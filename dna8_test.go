@@ -297,9 +297,9 @@ func ExampleDNA8_Hamming() {
 func ExampleDNA8_PDistance() {
 	s := bio.DNA8("CATTAG")
 	t := bio.DNA8("catagg")
-        fmt.Printf("%.3f\n", s.PDistance(t))
-        // Output:
-        // 0.333
+	fmt.Printf("%.3f\n", s.PDistance(t))
+	// Output:
+	// 0.333
 }
 
 func ExampleDNA8_MotifHamming() {
