@@ -25,3 +25,10 @@ func ExampleParseNewick() {
 	//   1   mouse      false     0.0     0           2            1
 	// Max path len to root: 2
 }
+
+func ExampleNewick_String() {
+	nt, _ := bio.ParseNewick("(mouse)dog:7.1;")
+	fmt.Println(nt)
+	// Output:
+	// (mouse)dog:7.1;
+}
