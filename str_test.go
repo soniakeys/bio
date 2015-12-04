@@ -11,6 +11,14 @@ import (
 	"github.com/soniakeys/graph"
 )
 
+func ExampleStr_PDistance() {
+	s := bio.Str("AGGCTTAC")
+	t := bio.Str("AGgCTAAC")
+	fmt.Println(s.PDistance(t))
+	// Output:
+	// 0.25
+}
+
 func ExampleStr_DNA8HammingVariants() {
 	for _, v := range bio.Str("Act").DNA8HammingVariants(1, nil) {
 		fmt.Println(v)

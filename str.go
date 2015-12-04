@@ -68,6 +68,16 @@ func (s Str) Hamming(t Str) int {
 	return h
 }
 
+// PDistance returns the proportional difference between two strings.
+//
+// It equals the Hamming distance divided by the sequence length.
+//
+// As with the Hamming method, sequences s and t must be of equal length.
+// Panic or nonsense results if the lengths are unequal.
+func (s Str) PDistance(t Str) float64 {
+	return float64(s.Hamming(t)) / float64(len(s))
+}
+
 // DNA8HammingVariants computes DNA k-mers -- as strings -- within hamming
 // distance d of receiver kmer k.
 //
