@@ -9,26 +9,51 @@ import (
 	"github.com/soniakeys/graph"
 )
 
-// PhyloRootedTree represents a rooted tree.
+// PhyloList represents a rooted tree using a graph.FromList.
 //
 // It has node names and edge weights as in the Newick format.
-type PhyloRootedTree struct {
+//
+// This is a compact minimimal representation but may not be convenient
+// for some algorithms.  See PhyloRootedTree for an alternative representation.
+type PhyloList struct {
 	Tree       graph.FromList // tree structure
-	Nodes      []PhyloRTNode  // parallel to Tree
+	Nodes      []PhyloNode    // parallel to Tree
+	Root       int            // root node of tree
 	NumNames   int            // count of Name > ""
 	NumWeights int            // count of HasWt == true
 }
 
-// PhyloRTNode represents data for a single node of a rooted tree.
-type PhyloRTNode struct {
+// PhyloRootedTree represents a rooted tree.
+//
+// It has node names and edge weights as in the Newick format.
+type PhyloRootedTree struct {
+	Tree       graph.LabeledAdjacencyList // tree structure
+	Nodes      []PhyloNode                // parallel to Tree
+	Root       int                        // root node of tree
+	NumNames   int                        // count of Name > ""
+	NumWeights int                        // count of HasWt == true
+}
+
+// PhyloNode represents data for a single node of a rooted tree.
+type PhyloNode struct {
 	Name      string
 	HasWeight bool
 	Weight    float64 // weight of edge to parent node.
 }
 
+func (t *PhyloList) RootedTree() *PhyloRootedTree {
+	return &PhyloRootedTree{
+		Tree:       t.Tree.TransposeLabeled(),
+		Nodes:      t.Nodes,
+		Root:       t.Root,
+		NumNames:   t.NumNames,
+		NumWeights: t.NumWeights,
+	}
+}
+
 // Newick serialializes to Newick format.
 func (t *PhyloRootedTree) Newick() string {
-	tr := t.Tree.TransposeLabeled()
+	tr := t.Tree
 	var f func(graph.Half) string
 	f = func(p graph.Half) (s string) {
 		to := tr[p.To]
@@ -47,20 +72,20 @@ func (t *PhyloRootedTree) Newick() string {
 		}
 		return s
 	}
-	return f(graph.Half{To: 0, Label: -1}) + ";"
+	return f(graph.Half{To: t.Root, Label: -1}) + ";"
 }
 
 type newickParser struct {
 	rem string
 	tok string
-	rt  *PhyloRootedTree
+	rt  *PhyloList
 }
 
 // ParseNewick parses Newick format.
 //
 // Argument s must have a terminating semicolon.  There can be nothing but
 // whitespace follwing the semicolon.
-func ParseNewick(s string) (*PhyloRootedTree, error) {
+func ParseNewick(s string) (*PhyloList, error) {
 	s = strings.TrimSpace(s)
 	if s == "" {
 		return nil, errors.New("no data")
@@ -69,14 +94,14 @@ func ParseNewick(s string) (*PhyloRootedTree, error) {
 	if s[last] != ';' {
 		return nil, errors.New("string not terminated with ;")
 	}
-	rt := &PhyloRootedTree{} // zero value is valid empty tree
+	rt := &PhyloList{} // zero value is valid empty tree
 	if len(s) == 1 {
 		return rt, nil // empty tree
 	}
 	// tree is not empty, create root
 	rt.Tree.Paths = []graph.PathEnd{{From: -1, Len: 1}}
 	rt.Tree.MaxLen = 1
-	rt.Nodes = []PhyloRTNode{{}}
+	rt.Nodes = []PhyloNode{{}}
 
 	p := &newickParser{rem: s[:last], rt: rt}
 	p.gettok()
@@ -157,7 +182,7 @@ func (p *newickParser) parseSet(n int) error {
 		// create child node
 		cn := len(fl.Paths)
 		fl.Paths = append(fl.Paths, graph.PathEnd{From: n, Len: pLen})
-		p.rt.Nodes = append(p.rt.Nodes, PhyloRTNode{})
+		p.rt.Nodes = append(p.rt.Nodes, PhyloNode{})
 
 		if err := p.parseSubtree(cn); err != nil {
 			return err

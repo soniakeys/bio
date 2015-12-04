@@ -26,9 +26,10 @@ func ExampleParseNewick() {
 	// Max path len to root: 2
 }
 
-func ExampleNewick_String() {
-	nk := "(dog,((elephant:3,mouse:1.2),robot),cat);"
-	rt, _ := bio.ParseNewick(nk)
+func ExamplePhyloRootedTree_Newick() {
+	pt, _ := bio.ParseNewick("(dog,((elephant:3,mouse:1.2),robot),cat);")
+	rt := pt.RootedTree()
+
 	fmt.Println(rt.Newick())
 	// Output:
 	// (dog,((elephant:3,mouse:1.2),robot),cat);
