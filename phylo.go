@@ -3,6 +3,7 @@ package bio
 import (
 	"errors"
 	"fmt"
+	"math/big"
 	"strconv"
 	"strings"
 
@@ -16,7 +17,7 @@ import (
 // This is a compact minimimal representation but may not be convenient
 // for some algorithms.  See PhyloRootedTree for an alternative representation.
 type PhyloList struct {
-	Tree       graph.FromList // tree structure
+	List       graph.FromList // tree encoded as a parent list
 	Nodes      []PhyloNode    // parallel to Tree
 	Root       int            // root node of tree
 	NumNames   int            // count of Name > ""
@@ -41,13 +42,13 @@ type PhyloNode struct {
 	Weight    float64 // weight of edge to parent node.
 }
 
-func (t *PhyloList) RootedTree() *PhyloRootedTree {
+func (l *PhyloList) RootedTree() *PhyloRootedTree {
 	return &PhyloRootedTree{
-		Tree:       t.Tree.TransposeLabeled(),
-		Nodes:      t.Nodes,
-		Root:       t.Root,
-		NumNames:   t.NumNames,
-		NumWeights: t.NumWeights,
+		Tree:       l.List.TransposeLabeled(),
+		Nodes:      l.Nodes,
+		Root:       l.Root,
+		NumNames:   l.NumNames,
+		NumWeights: l.NumWeights,
 	}
 }
 
@@ -78,7 +79,7 @@ func (t *PhyloRootedTree) Newick() string {
 type newickParser struct {
 	rem string
 	tok string
-	rt  *PhyloList
+	pl  *PhyloList
 }
 
 // ParseNewick parses Newick format.
@@ -94,16 +95,16 @@ func ParseNewick(s string) (*PhyloList, error) {
 	if s[last] != ';' {
 		return nil, errors.New("string not terminated with ;")
 	}
-	rt := &PhyloList{} // zero value is valid empty tree
+	pl := &PhyloList{} // zero value is valid empty tree
 	if len(s) == 1 {
-		return rt, nil // empty tree
+		return pl, nil // empty tree
 	}
 	// tree is not empty, create root
-	rt.Tree.Paths = []graph.PathEnd{{From: -1, Len: 1}}
-	rt.Tree.MaxLen = 1
-	rt.Nodes = []PhyloNode{{}}
+	pl.List.Paths = []graph.PathEnd{{From: -1, Len: 1}}
+	pl.List.MaxLen = 1
+	pl.Nodes = []PhyloNode{{}}
 
-	p := &newickParser{rem: s[:last], rt: rt}
+	p := &newickParser{rem: s[:last], pl: pl}
 	p.gettok()
 	if err := p.parseSubtree(0); err != nil {
 		return nil, err
@@ -115,7 +116,7 @@ func ParseNewick(s string) (*PhyloList, error) {
 		// fmt.Println("debug: p.rem:", p.rem)
 		return nil, errors.New("unparsed text follows complete tree: " + p.rem)
 	}
-	return rt, nil
+	return pl, nil
 }
 
 func (p *newickParser) gettok() {
@@ -144,7 +145,7 @@ func (p *newickParser) parseSubtree(n int) (err error) {
 		return p.parseSet(n)
 	}
 	// leaf node
-	p.rt.Tree.Leaves.SetBit(&p.rt.Tree.Leaves, n, 1)
+	p.pl.List.Leaves.SetBit(&p.pl.List.Leaves, n, 1)
 	if p.tok != ")" && p.tok != "," {
 		err = p.nameWeight(n)
 	}
@@ -153,19 +154,19 @@ func (p *newickParser) parseSubtree(n int) (err error) {
 
 // add name and weight to node
 func (p *newickParser) nameWeight(n int) (err error) {
-	pn := &p.rt.Nodes[n]
+	pn := &p.pl.Nodes[n]
 	tok := p.tok
 	if w := strings.Index(tok, ":"); w >= 0 {
 		if pn.Weight, err = strconv.ParseFloat(tok[w+1:], 64); err != nil {
 			return err
 		}
 		pn.HasWeight = true
-		p.rt.NumWeights++
+		p.pl.NumWeights++
 		tok = tok[:w]
 	}
 	if tok > "" {
 		pn.Name = tok
-		p.rt.NumNames++
+		p.pl.NumNames++
 	}
 	p.gettok() // get token after name:weight
 	return nil
@@ -173,7 +174,7 @@ func (p *newickParser) nameWeight(n int) (err error) {
 
 func (p *newickParser) parseSet(n int) error {
 	p.gettok()                  // get token after (
-	fl := &p.rt.Tree            // dereference FromList
+	fl := &p.pl.List            // dereference FromList
 	pLen := fl.Paths[n].Len + 1 // path length to nodes in this set
 	if pLen > fl.MaxLen {
 		fl.MaxLen = pLen
@@ -182,7 +183,7 @@ func (p *newickParser) parseSet(n int) error {
 		// create child node
 		cn := len(fl.Paths)
 		fl.Paths = append(fl.Paths, graph.PathEnd{From: n, Len: pLen})
-		p.rt.Nodes = append(p.rt.Nodes, PhyloNode{})
+		p.pl.Nodes = append(p.pl.Nodes, PhyloNode{})
 
 		if err := p.parseSubtree(cn); err != nil {
 			return err
@@ -204,4 +205,50 @@ func (p *newickParser) parseSet(n int) error {
 		return err
 	}
 	return nil
+}
+
+func (l *PhyloList) PathLen(a, b int) int {
+	p := l.List.Paths
+	return p[a].Len + p[b].Len - 2*p[l.List.CommonAncestor(a, b)].Len
+}
+
+func (l *PhyloList) NodeMap() map[string]int {
+	m := map[string]int{}
+	for n, nd := range l.Nodes {
+		if nd.Name > "" {
+			m[nd.Name] = n
+		}
+	}
+	return m
+}
+
+// CharacterTable lists non-trivial characters of a phylogenetic tree.
+//
+// A character is represented as bits of a big.Int with bits set by node number
+// of the tree.  A non-trivial character corresponds to an internal arc of
+// the tree; that is, an arc not connecting a leaf node.  For a single
+// character, bits of the big.Int will be set to 1 for nodes of the subtree
+// pointed to by the arc, other bits will be 0.
+func (t *PhyloRootedTree) CharacterTable() []big.Int {
+	g := t.Tree
+	chars := make([]big.Int, 0, len(g)-3)
+	var f func(int) big.Int
+	f = func(p int) big.Int {
+		var pb big.Int
+		pb.SetBit(&pb, p, 1)
+		for _, to := range g[p] {
+			tb := f(to.To)
+			if len(g[to.To]) > 0 {
+				chars = append(chars, tb)
+			}
+			pb.Or(&pb, &tb)
+		}
+		return pb
+	}
+	n := t.Root
+	if to := g[n]; len(to) == 1 {
+		n = to[0].To // skip root leaf
+	}
+	f(n)
+	return chars
 }
