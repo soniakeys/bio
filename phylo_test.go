@@ -110,3 +110,24 @@ func ExamplePhyloRootedTree_CharacterTable_leafRoot() {
 	// 01110000
 	// 11111000
 }
+
+func ExampleStrKmers_CharacterTable() {
+	sk := bio.StrKmers{
+		"GCATTACC",
+		"TTCGTACC",
+		"TCATGACC",
+		"TCAGTCCC",
+		"TCCGTATC",
+	}
+	fmt.Println("43210  Position")
+	fmt.Println("-----  -")
+	ct, pos, _ := sk.CharacterTable()
+	for i, c := range ct {
+		fmt.Printf("%0*b  %d\n", len(sk), &c, pos[i])
+	}
+	// Output:
+	// 43210  Position
+	// -----  -
+	// 10010  2
+	// 00101  3
+}

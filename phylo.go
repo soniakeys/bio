@@ -3,6 +3,7 @@ package bio
 import (
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"strconv"
 	"strings"
@@ -212,6 +213,28 @@ func (l *PhyloList) PathLen(a, b int) int {
 	return p[a].Len + p[b].Len - 2*p[l.List.CommonAncestor(a, b)].Len
 }
 
+func (l *PhyloList) Distance(a, b int) (d float64) {
+	// code similar to graph.CommonAncestor
+	p := l.List.Paths
+	n := l.Nodes
+	if a < 0 || b < 0 || a >= len(p) || b >= len(p) {
+		return math.NaN()
+	}
+	if p[a].Len < p[b].Len {
+		a, b = b, a
+	}
+	for bl := p[b].Len; p[a].Len > bl; {
+		d += n[a].Weight
+		a = p[a].From
+	}
+	for a != b {
+		d += n[a].Weight + n[b].Weight
+		a = p[a].From
+		b = p[b].From
+	}
+	return d
+}
+
 func (l *PhyloList) NodeMap() map[string]int {
 	m := map[string]int{}
 	for n, nd := range l.Nodes {
@@ -251,4 +274,59 @@ func (t *PhyloRootedTree) CharacterTable() []big.Int {
 	}
 	f(n)
 	return chars
+}
+
+// CharacterTableFromStrings produces a phylogenetic character table from
+// a set of equal length symbol strings.
+//
+// A character is considered to exist for symbol position when at least
+// two strings have the the same symbol and at least two two strings have
+// a different symbol.  In this case a modal character is determined and
+// strings with a symbol other than the nominal modal will have the bit
+// set to 1 in the corresponding position of the character.
+//
+// At least four strings are required.  An error is returned for < 4 strings
+// or for strings of unequal length.
+func (sk StrKmers) CharacterTable() (ct []big.Int, pos []int, err error) {
+	if len(sk) < 4 {
+		return nil, nil, errors.New("not enough strings to characterize")
+	}
+	// validate string lengths equal
+	s0 := sk[0]
+	sLen := len(sk[0])
+	if sLen == 0 {
+		return nil, nil, errors.New("can't characterize empty strings")
+	}
+	for _, s := range sk[1:] {
+		if len(s) != sLen {
+			return nil, nil, errors.New("strings different lengths")
+		}
+	}
+	for i := range s0 {
+		// loop1, find mode
+		var f [256]int
+		var mode int
+		var modal byte
+		for _, s := range sk {
+			sym := s[i]
+			f[sym]++
+			if f[sym] > mode {
+				mode = f[sym]
+				modal = sym
+			}
+		}
+		if len(sk)-mode < 2 {
+			continue // no or trivial split
+		}
+		// loop 2, add character
+		var c big.Int
+		for p, s := range sk {
+			if s[i] != modal {
+				c.SetBit(&c, p, 1)
+			}
+		}
+		ct = append(ct, c)
+		pos = append(pos, i)
+	}
+	return
 }

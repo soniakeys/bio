@@ -53,6 +53,31 @@ func (s Str) AllIndex(m Str) (x []int) {
 	return
 }
 
+// Freq counts the frequency of all bytes appearing in a string.
+//
+// The returned array contains a count of each symbol appearing in the sequence.
+func (s Str) Freq() *[256]int {
+	var a [256]int
+	for _, b := range []byte(s) {
+		a[b]++
+	}
+	return &a
+}
+
+// FreqMap returns counts of all bytes appearing in a string.
+//
+// The returned map contains a key for each symbol appearing in the sequence.
+// If a symbol does not appear in the sequence, there will be no map key for it.
+// Upper and lower case are treated as distinct.  If a sequence contains both
+// 'A' and 'a' the result will contain separate counts for the two symbols.
+func (s Str) FreqMap() map[byte]int {
+	m := map[byte]int{}
+	for _, b := range []byte(s) {
+		m[b]++
+	}
+	return m
+}
+
 // Hamming returns the Hamming distance between two Strs.
 // Comparison is done byte-wise and so is case sensitive.
 //
