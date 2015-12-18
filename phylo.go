@@ -13,7 +13,7 @@ import (
 
 // PhyloList represents a rooted tree using a graph.FromList.
 //
-// It has node names and edge weights as in the Newick format.
+// It has node names and arc weights as in the Newick format.
 //
 // This is a compact minimimal representation but may not be convenient
 // for some algorithms.  See PhyloRootedTree for an alternative representation.
@@ -27,25 +27,25 @@ type PhyloList struct {
 
 // PhyloRootedTree represents a rooted tree.
 //
-// It has node names and edge weights as in the Newick format.
+// It has node names and arc weights as in the Newick format.
 type PhyloRootedTree struct {
-	Tree       graph.LabeledAdjacencyList // tree structure
-	Nodes      []PhyloNode                // parallel to Tree
-	Root       int                        // root node of tree
-	NumNames   int                        // count of Name > ""
-	NumWeights int                        // count of HasWt == true
+	Tree       graph.AdjacencyList // tree structure
+	Nodes      []PhyloNode         // parallel to Tree
+	Root       int                 // root node of tree
+	NumNames   int                 // count of Name > ""
+	NumWeights int                 // count of HasWt == true
 }
 
 // PhyloNode represents data for a single node of a rooted tree.
 type PhyloNode struct {
 	Name      string
 	HasWeight bool
-	Weight    float64 // weight of edge to parent node.
+	Weight    float64 // weight of arc from parent node.
 }
 
 func (l *PhyloList) RootedTree() *PhyloRootedTree {
 	return &PhyloRootedTree{
-		Tree:       l.List.TransposeLabeled(),
+		Tree:       l.List.Transpose(),
 		Nodes:      l.Nodes,
 		Root:       l.Root,
 		NumNames:   l.NumNames,
@@ -53,12 +53,12 @@ func (l *PhyloList) RootedTree() *PhyloRootedTree {
 	}
 }
 
-// Newick serialializes to Newick format.
+// Newick serializes to Newick format.
 func (t *PhyloRootedTree) Newick() string {
 	tr := t.Tree
-	var f func(graph.Half) string
-	f = func(p graph.Half) (s string) {
-		to := tr[p.To]
+	var f func(int) string
+	f = func(p int) (s string) {
+		to := tr[p]
 		if len(to) > 0 { // format children
 			c := make([]string, len(to))
 			for i, to := range to {
@@ -66,15 +66,14 @@ func (t *PhyloRootedTree) Newick() string {
 			}
 			s = fmt.Sprintf("(%s)", strings.Join(c, ","))
 		}
-		s += t.Nodes[p.To].Name
-		if p.Label >= 0 {
-			if nd := t.Nodes[p.Label]; nd.HasWeight {
-				s = fmt.Sprintf("%s:%g", s, nd.Weight)
-			}
+		nd := t.Nodes[p]
+		s += nd.Name
+		if nd.HasWeight {
+			s = fmt.Sprintf("%s:%g", s, nd.Weight)
 		}
 		return s
 	}
-	return f(graph.Half{To: t.Root, Label: -1}) + ";"
+	return f(t.Root) + ";"
 }
 
 type newickParser struct {
@@ -260,8 +259,8 @@ func (t *PhyloRootedTree) CharacterTable() []big.Int {
 		var pb big.Int
 		pb.SetBit(&pb, p, 1)
 		for _, to := range g[p] {
-			tb := f(to.To)
-			if len(g[to.To]) > 0 {
+			tb := f(to)
+			if len(g[to]) > 0 {
 				chars = append(chars, tb)
 			}
 			pb.Or(&pb, &tb)
@@ -270,7 +269,7 @@ func (t *PhyloRootedTree) CharacterTable() []big.Int {
 	}
 	n := t.Root
 	if to := g[n]; len(to) == 1 {
-		n = to[0].To // skip root leaf
+		n = to[0] // skip root leaf
 	}
 	f(n)
 	return chars
