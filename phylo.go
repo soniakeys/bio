@@ -43,6 +43,7 @@ type PhyloNode struct {
 	Weight    float64 // weight of arc from parent node.
 }
 
+// RootedTree construsts a PhyloRootedTree equivalent to a PhyloList
 func (l *PhyloList) RootedTree() *PhyloRootedTree {
 	return &PhyloRootedTree{
 		Tree:       l.List.Transpose(),
@@ -207,11 +208,13 @@ func (p *newickParser) parseSet(n int) error {
 	return nil
 }
 
+// PathLen returns the number of arcs between the nodes.
 func (l *PhyloList) PathLen(a, b int) int {
 	p := l.List.Paths
 	return p[a].Len + p[b].Len - 2*p[l.List.CommonAncestor(a, b)].Len
 }
 
+// Distance returns the sum of arc weights between two nodes
 func (l *PhyloList) Distance(a, b int) (d float64) {
 	// code similar to graph.CommonAncestor
 	p := l.List.Paths
@@ -234,6 +237,11 @@ func (l *PhyloList) Distance(a, b int) (d float64) {
 	return d
 }
 
+// NodeMap constructs a map from node names to node indexes.
+//
+// Only named nodes are included in the map and names are assumed to be
+// unique.  That is, each distinct non-empty name will map to a single node
+// index.
 func (l *PhyloList) NodeMap() map[string]int {
 	m := map[string]int{}
 	for n, nd := range l.Nodes {
@@ -275,7 +283,7 @@ func (t *PhyloRootedTree) CharacterTable() []big.Int {
 	return chars
 }
 
-// CharacterTableFromStrings produces a phylogenetic character table from
+// CharacterTable produces a phylogenetic character table from
 // a set of equal length symbol strings.
 //
 // A character is considered to exist for symbol position when at least
