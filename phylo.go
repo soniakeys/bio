@@ -15,42 +15,64 @@ import (
 //
 // It has node names and arc weights as in the Newick format.
 //
-// This is a compact minimimal representation but may not be convenient
-// for some algorithms.  See PhyloRootedTree for an alternative representation.
+// This is a compact and fairly minimimal representation that still
+// facilites computation.  In this representation arcs are directed
+// from the leaves toward the root.
+//
+// Some algorithms require a different representation however.
+// See PhyloRootedTree for an alternative representation with a different
+// method set.
 type PhyloList struct {
-	List       graph.FromList // tree encoded as a parent list
-	Nodes      []PhyloNode    // parallel to Tree
-	Root       int            // root node of tree
-	NumNames   int            // count of Name > ""
-	NumWeights int            // count of HasWt == true
+	List       graph.FromList    // tree encoded as a parent list
+	Nodes      []PhyloRootedNode // parallel to Tree
+	Root       int               // root node of tree
+	NumLeaves  int               // count of leaf nodes
+	NumNames   int               // count of Name > ""
+	NumWeights int               // count of HasWt == true
 }
 
 // PhyloRootedTree represents a rooted tree.
 //
 // It has node names and arc weights as in the Newick format.
+//
+// In this representation arcs are directed from the root toward the leaves.
 type PhyloRootedTree struct {
-	Tree       graph.AdjacencyList // tree structure
-	Nodes      []PhyloNode         // parallel to Tree
-	Root       int                 // root node of tree
-	NumNames   int                 // count of Name > ""
-	NumWeights int                 // count of HasWt == true
+	Tree       [][]int           // adjacency list tree structure
+	Nodes      []PhyloRootedNode // parallel to Tree
+	Root       int               // root node of tree
+	NumLeaves  int               // count of leaf nodes
+	NumNames   int               // count of Name > ""
+	NumWeights int               // count of HasWt == true
 }
 
-// PhyloNode represents data for a single node of a rooted tree.
-type PhyloNode struct {
+// PhyloRootedNode represents data for a single node of a rooted tree.
+type PhyloRootedNode struct {
 	Name      string
 	HasWeight bool
 	Weight    float64 // weight of arc from parent node.
 }
 
-// RootedTree construsts a PhyloRootedTree equivalent to a PhyloList
+// RootedTree construsts a PhyloRootedTree equivalent to a PhyloList.
 func (l *PhyloList) RootedTree() *PhyloRootedTree {
 	return &PhyloRootedTree{
 		Tree:       l.List.Transpose(),
 		Nodes:      l.Nodes,
 		Root:       l.Root,
+		NumLeaves:  l.NumLeaves,
 		NumNames:   l.NumNames,
 		NumWeights: l.NumWeights,
+	}
+}
+
+// List constructs a PhyloList equivalent to a PhyloRootedTree.
+func (t *PhyloRootedTree) List() *PhyloList {
+	return &PhyloList{
+		List:       graph.AdjacencyList(t.Tree).FromList(),
+		Nodes:      t.Nodes,
+		Root:       t.Root,
+		NumLeaves:  t.NumLeaves,
+		NumNames:   t.NumNames,
+		NumWeights: t.NumWeights,
 	}
 }
 
@@ -103,7 +125,7 @@ func ParseNewick(s string) (*PhyloList, error) {
 	// tree is not empty, create root
 	pl.List.Paths = []graph.PathEnd{{From: -1, Len: 1}}
 	pl.List.MaxLen = 1
-	pl.Nodes = []PhyloNode{{}}
+	pl.Nodes = []PhyloRootedNode{{}}
 
 	p := &newickParser{rem: s[:last], pl: pl}
 	p.gettok()
@@ -146,6 +168,7 @@ func (p *newickParser) parseSubtree(n int) (err error) {
 		return p.parseSet(n)
 	}
 	// leaf node
+	p.pl.NumLeaves++
 	p.pl.List.Leaves.SetBit(&p.pl.List.Leaves, n, 1)
 	if p.tok != ")" && p.tok != "," {
 		err = p.nameWeight(n)
@@ -184,7 +207,7 @@ func (p *newickParser) parseSet(n int) error {
 		// create child node
 		cn := len(fl.Paths)
 		fl.Paths = append(fl.Paths, graph.PathEnd{From: n, Len: pLen})
-		p.pl.Nodes = append(p.pl.Nodes, PhyloNode{})
+		p.pl.Nodes = append(p.pl.Nodes, PhyloRootedNode{})
 
 		if err := p.parseSubtree(cn); err != nil {
 			return err
@@ -336,4 +359,124 @@ func (sk StrKmers) CharacterTable() (ct []big.Int, pos []int, err error) {
 		pos = append(pos, i)
 	}
 	return
+}
+
+// MaxParsimony implements "small parsimony" -- max parsimony for
+// the given tree structure.
+//
+// MaxParsimony computes kmers for internal nodes of the tree.  It solves
+// for kmers that minimize the total tree weight, as the sum of all arc
+// weights, where an arc weight is the DNA8 hamming distance between a node
+// and its parent.
+//
+// The argument kmers is parallel to the nodes of t.  On entry, all kmers
+// must be allocated and kmers for leaf nodes must have valid DNA8 content.
+//
+// MaxParsimonly fills in the content for kmers of internal nodes, and assigns
+// weights to all nodes of the tree.  The root will be assigned weight 0,
+// but with HasWeight set to false.
+func (t *PhyloRootedTree) MaxParsimony(kmers Kmers) (total int) {
+	tree := t.Tree
+	nodes := t.Nodes
+	cost4 := make([][4]float64, len(tree)) // (dis)parsimony scores
+	inf4 := [4]float64{math.Inf(1), math.Inf(1), math.Inf(1), math.Inf(1)}
+
+	var score func(int, int)
+	score = func(n, sx int) {
+		if len(tree[n]) == 0 {
+			copy(cost4[n][:], inf4[:])
+			cost4[n][kmers[n][sx]>>1&3] = 0
+			return
+		}
+		//fmt.Println("scoring node", n)
+		for _, ch := range tree[n] {
+			score(ch, sx)
+		}
+		for k := range "ACTG" {
+			//fmt.Println("  base index", k)
+			d := 0. // s(k)(v) from the text, the (dis)pars score for sym k
+			for _, ch := range tree[n] {
+				//fmt.Println("    child", ch, "dis[ch]", dis[ch])
+				min := math.Inf(1)
+				for i, dch := range cost4[ch] {
+					if i != k {
+						dch++
+					}
+					if dch < min {
+						min = dch
+					}
+				}
+				d += min
+			}
+			cost4[n][k] = d
+		}
+		//fmt.Println("node", n, "scored:", dis[n])
+	}
+
+	var labelNodes func(int, int, int)
+	labelNodes = func(n, sx, axp int) {
+		if len(tree[n]) == 0 { // leaf nodes come with labels
+			// just need to note distance
+			if int(kmers[n][sx]>>1&3) != axp {
+				nodes[n].Weight++
+				total++
+			}
+			return
+		}
+		min := math.Inf(1)
+		var xMin int
+		for x, d := range cost4[n] {
+			if x != axp {
+				d++
+			}
+			if d < min {
+				min = d
+				xMin = x
+			}
+		}
+		kmers[n][sx] = "ACTG"[xMin]
+		if xMin != axp {
+			nodes[n].Weight++
+			total++
+		}
+		for _, ch := range tree[n] {
+			labelNodes(ch, sx, xMin)
+		}
+	}
+
+	// initialize
+	for n := range nodes {
+		nodes[n].Weight = 0
+		nodes[n].HasWeight = true
+	}
+	// outer loop goes by symbol position
+	for sx := range kmers[0] {
+		// depth first pass 1: accumulate dis-parsimony scores
+		score(t.Root, sx)
+		// depth first pass 2: build labels for internal nodes
+		labelNodes(t.Root, sx, -1)
+	}
+	total -= len(kmers[0])
+	nodes[t.Root].Weight = 0
+	nodes[t.Root].HasWeight = false
+	t.NumWeights = len(tree) - 1
+	return
+}
+
+// DistanceMatrix constructs a distance matrix from a PhyloList.
+func (l *PhyloList) DistanceMatrix(leaves []int) [][]float64 {
+	m := make([][]float64, len(leaves))
+	for i := range m {
+		m[i] = make([]float64, len(leaves))
+	}
+	for i := 1; i < len(leaves); i++ {
+		li := leaves[i]
+		mi := m[i]
+		for j, lj := range leaves[:i] {
+			d := l.Distance(li, lj)
+			mi[j] = d
+			m[j][i] = d
+		}
+	}
+	return m
 }

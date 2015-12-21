@@ -131,3 +131,80 @@ func ExampleStrKmers_CharacterTable() {
 	// 10010  2
 	// 00101  3
 }
+
+func ExamplePhyloRootedTree_MaxParsimony() {
+	//       6
+	//     /   \
+	//   4       5
+	//  / \     / \
+	// 0   1   2   3
+	// |   |   |   ATGGACGA
+	// |   |   CTGCGCTG
+	// |   ATTGCGAC
+	// CAAATCCC
+	tree := [][]int{
+		4: []int{0, 1},
+		5: []int{2, 3},
+		6: []int{4, 5},
+	}
+	nodes := make([]bio.PhyloRootedNode, len(tree))
+	rt := &bio.PhyloRootedTree{
+		Tree:  tree,
+		Nodes: nodes,
+		Root:  6,
+	}
+	kmers := bio.Kmers{
+		bio.DNA8("CAAATCCC"),
+		bio.DNA8("ATTGCGAC"),
+		bio.DNA8("CTGCGCTG"),
+		bio.DNA8("ATGGACGA"),
+		bio.DNA8("--------"),
+		bio.DNA8("--------"),
+		bio.DNA8("--------"),
+	}
+	rt.MaxParsimony(kmers)
+	treeWt := 0.
+	fmt.Println("node   kmer    weight from parent")
+	for i, k := range kmers {
+		fmt.Printf("%d    %s         %g\n", i, k, nodes[i].Weight)
+		treeWt += nodes[i].Weight
+	}
+	fmt.Println(">             total:", treeWt)
+	// Output:
+	// node   kmer    weight from parent
+	// 0    CAAATCCC         5
+	// 1    ATTGCGAC         3
+	// 2    CTGCGCTG         5
+	// 3    ATGGACGA         1
+	// 4    ATAGACAC         1
+	// 5    ATGGACAA         1
+	// 6    ATAGACAA         0
+	// >             total: 16
+}
+
+func ExamplePhyloList_DistanceMatrix() {
+	l, _ := bio.ParseNewick("((:11,:2):4,:6,:7);")
+	// gives:
+	//         ----0----
+	//  (wt=4)/    |    \
+	//       1     |(6)  |(7)
+	//  (11)/ \(2) |     |
+	//     2   3   4     5
+	m := l.DistanceMatrix([]int{2, 3, 4, 5})
+	for _, r := range m {
+		fmt.Printf("%2.0f\n", r)
+	}
+	fmt.Println("-------")
+	m = l.DistanceMatrix([]int{5, 2})
+	for _, r := range m {
+		fmt.Printf("%2.0f\n", r)
+	}
+	// Output:
+	// [ 0 13 21 22]
+	// [13  0 12 13]
+	// [21 12  0 13]
+	// [22 13 13  0]
+	// -------
+	// [ 0 22]
+	// [22  0]
+}
