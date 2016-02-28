@@ -18,9 +18,9 @@ import (
 // cost labeled edges.
 type UTree struct {
 	NLeaves int
-	T       graph.LabeledAdjacencyList // len(T) is 2*NLeaves-2
-	Kmers   Kmers                      // len(Kmers) is len(T)
-	Costs   []float64                  // edge costs, len(Costs) = len(T)-1
+	T       graph.UndirectedLabeled // len(T) is 2*NLeaves-2
+	Kmers   Kmers                   // len(Kmers) is len(T)
+	Costs   []float64               // edge costs, len(Costs) = len(T)-1
 }
 
 // but first here's the rooted tree function,
@@ -28,15 +28,16 @@ type UTree struct {
 // DNA8MaxParsimonyRooted solves kmers and costs for maximum parsimony
 // (minimum total cost) in a rooted phylogenic tree.
 //
-// The argument tree is a directed graph, nodes 0:len(leaves) must be leaf
+// The argument g is a directed graph, nodes 0:len(leaves) must be leaf
 // nodes, node len(tree)-1 must be the root.
 //
 // Returned kmers will be the leaves argument with appended kmers labeling
 // internal nodes and the root.  Returned cost slice is parallel to kmers
 // (and the input tree).  Cost for a node is the hamming distance from the
 // node's parent.  Cost 0 is returned for the root.
-func DNA8MaxParsimonyRooted(tree graph.AdjacencyList, leaves Kmers) (kmers Kmers, costs []float64) {
-	root := len(tree) - 1
+func DNA8MaxParsimonyRooted(g graph.Directed, leaves Kmers) (kmers Kmers, costs []float64) {
+	tree := g.AdjacencyList
+	root := graph.NI(len(tree)) - 1
 	m := len(leaves[0])
 	kmers = append(leaves, make(Kmers, len(tree)-len(leaves))...)
 	for i := len(leaves); i < len(tree); i++ {
@@ -45,8 +46,8 @@ func DNA8MaxParsimonyRooted(tree graph.AdjacencyList, leaves Kmers) (kmers Kmers
 	costs = make([]float64, len(tree))     // cost is edge length from parent
 	cost4 := make([][4]float64, len(tree)) // (dis)parsimony scores
 	inf4 := [4]float64{math.Inf(1), math.Inf(1), math.Inf(1), math.Inf(1)}
-	var score func(int, int)
-	score = func(n, sx int) {
+	var score func(graph.NI, int)
+	score = func(n graph.NI, sx int) {
 		if len(tree[n]) == 0 {
 			copy(cost4[n][:], inf4[:])
 			cost4[n][kmers[n][sx]>>1&3] = 0
@@ -77,8 +78,8 @@ func DNA8MaxParsimonyRooted(tree graph.AdjacencyList, leaves Kmers) (kmers Kmers
 		//fmt.Println("node", n, "scored:", dis[n])
 	}
 
-	var labelNodes func(int, int, int)
-	labelNodes = func(n, sx, axp int) {
+	var labelNodes func(graph.NI, int, int)
+	labelNodes = func(n graph.NI, sx, axp int) {
 		if len(tree[n]) == 0 { // leaf nodes come with labels
 			// just need to note distance
 			if int(kmers[n][sx]>>1&3) != axp {
@@ -126,53 +127,54 @@ func DNA8MaxParsimonyRooted(tree graph.AdjacencyList, leaves Kmers) (kmers Kmers
 // dna8MaxParsimonyUnrooted solves kmers and costs for maximum parsimony
 // (minimum total cost) in a rooted phylogenic tree.
 //
-// The argument tree is a undirected graph, nodes 0:len(leaves) must be leaf
+// The argument g is a undirected graph, nodes 0:len(leaves) must be leaf
 // nodes.  It must be a tree and so have len(tree)-1 edges, labeled with
 // numbers 0:len(tree)-1.
 //
 // Returned kmers will be the leaves argument with appended kmers labeling
 // internal nodes and the root.  Returned cost slice is indexed by the
 // graph edge labels.
-func dna8MaxParsimonyUnrooted(tree graph.LabeledAdjacencyList, leaves Kmers) (kmers Kmers, costs []float64) {
+func dna8MaxParsimonyUnrooted(g graph.UndirectedLabeled, leaves Kmers) (kmers Kmers, costs []float64) {
+	tree := g.LabeledAdjacencyList
 	// for each edge, construct rooted tree, call DNA8MaxParsimonyRooted().
 	// df traversal to get each edge just once.
-	root := len(tree) // new node
+	root := graph.NI(len(tree)) // new node
 	rt := make(graph.AdjacencyList, root+1)
 	// store edges labels to with associate costs in the end.
-	labels := make([]int, len(tree))
+	labels := make([]graph.LI, len(tree))
 	var pop big.Int
-	var populate func(int, graph.Half)
-	populate = func(parent int, ch graph.Half) {
-		pop.SetBit(&pop, parent, 1)
+	var populate func(graph.NI, graph.Half)
+	populate = func(parent graph.NI, ch graph.Half) {
+		pop.SetBit(&pop, int(parent), 1)
 		rt[parent] = append(rt[parent], ch.To)
 		labels[ch.To] = ch.Label
 		parent = ch.To
 		for _, ch := range tree[parent] {
-			if pop.Bit(ch.To) == 0 {
+			if pop.Bit(int(ch.To)) == 0 {
 				populate(parent, ch)
 			}
 		}
 	}
-	split := func(n1 int, n2 graph.Half) {
+	split := func(n1 graph.NI, n2 graph.Half) {
 		pop = big.Int{}
-		pop.SetBit(&pop, n1, 1)
-		pop.SetBit(&pop, n2.To, 1)
+		pop.SetBit(&pop, int(n1), 1)
+		pop.SetBit(&pop, int(n2.To), 1)
 		populate(root, graph.Half{n1, n2.Label})
 		populate(root, n2)
 	}
 
 	var minC = math.Inf(1)
-	var minTree = make([][]int, len(rt))
+	var minTree = make(graph.AdjacencyList, len(rt))
 	var minKmers Kmers
 	var minCosts []float64
-	var minEdgeLabels = make([]int, len(labels))
+	var minEdgeLabels = make([]graph.LI, len(labels))
 
 	var vis big.Int
-	var rootEdges func(int)
-	rootEdges = func(n int) {
-		vis.SetBit(&vis, n, 1)
+	var rootEdges func(graph.NI)
+	rootEdges = func(n graph.NI) {
+		vis.SetBit(&vis, int(n), 1)
 		for _, ch := range tree[n] {
-			if vis.Bit(ch.To) == 1 {
+			if vis.Bit(int(ch.To)) == 1 {
 				continue
 			}
 			// root tree at this edge.
@@ -180,7 +182,7 @@ func dna8MaxParsimonyUnrooted(tree graph.LabeledAdjacencyList, leaves Kmers) (km
 				rt[i] = nil // clear tree
 			}
 			split(n, ch)
-			kmers, costs := DNA8MaxParsimonyRooted(rt, leaves)
+			kmers, costs := DNA8MaxParsimonyRooted(graph.Directed{rt}, leaves)
 			c := 0.
 			for _, ec := range costs {
 				c += ec
@@ -203,20 +205,20 @@ func dna8MaxParsimonyUnrooted(tree graph.LabeledAdjacencyList, leaves Kmers) (km
 	return minKmers[:len(tree)], costs
 }
 
-func (u *UTree) MaxParsimonyEdge(from int, to graph.Half) float64 {
-	cost4 := make([][4]float64, len(u.T)) // (dis)parsimony scores
+func (u *UTree) MaxParsimonyEdge(from graph.NI, to graph.Half) float64 {
+	cost4 := make([][4]float64, len(u.T.LabeledAdjacencyList)) // (dis)parsimony scores
 	//	var vis, v0 big.Int
 	//	v0.SetBit(&v0, from, 1)
 	inf4 := [4]float64{math.Inf(1), math.Inf(1), math.Inf(1), math.Inf(1)}
-	var score func(int, int, int)
-	score = func(from, n, sx int) {
-		if len(u.T[n]) == 1 {
+	var score func(graph.NI, graph.NI, int)
+	score = func(from, n graph.NI, sx int) {
+		if len(u.T.LabeledAdjacencyList[n]) == 1 {
 			copy(cost4[n][:], inf4[:])
 			cost4[n][u.Kmers[n][sx]>>1&3] = 0
 			return
 		}
 		//fmt.Println("scoring node", n)
-		for _, ch := range u.T[n] {
+		for _, ch := range u.T.LabeledAdjacencyList[n] {
 			if ch.To != from {
 				score(n, ch.To, sx)
 			}
@@ -224,7 +226,7 @@ func (u *UTree) MaxParsimonyEdge(from int, to graph.Half) float64 {
 		for k := range "ACTG" {
 			//fmt.Println("  base index", k)
 			d := 0. // s(k)(v) from the text, the (dis)pars score for sym k
-			for _, ch := range u.T[n] {
+			for _, ch := range u.T.LabeledAdjacencyList[n] {
 				if ch.To == from {
 					continue
 				}
@@ -248,9 +250,9 @@ func (u *UTree) MaxParsimonyEdge(from int, to graph.Half) float64 {
 	// okay really label node n and compute cost for the edge leading to n.
 	// axp is the "alphabet index of the parent"
 	// return value is total cost (for the symbol position)
-	var labelNodes func(int, graph.Half, int, int) float64
-	labelNodes = func(from int, n graph.Half, sx, axp int) float64 {
-		if len(u.T[n.To]) == 1 { // leaf nodes come with labels
+	var labelNodes func(graph.NI, graph.Half, int, int) float64
+	labelNodes = func(from graph.NI, n graph.Half, sx, axp int) float64 {
+		if len(u.T.LabeledAdjacencyList[n.To]) == 1 { // leaf nodes come with labels
 			// just need to note distance
 			if int(u.Kmers[n.To][sx]>>1&3) != axp {
 				u.Costs[n.Label]++
@@ -275,7 +277,7 @@ func (u *UTree) MaxParsimonyEdge(from int, to graph.Half) float64 {
 			u.Costs[n.Label]++
 			tot = 1
 		}
-		for _, ch := range u.T[n.To] {
+		for _, ch := range u.T.LabeledAdjacencyList[n.To] {
 			if ch.To != from {
 				tot += labelNodes(n.To, ch, sx, xMin)
 			}
@@ -297,7 +299,7 @@ func (u *UTree) MaxParsimonyEdge(from int, to graph.Half) float64 {
 		var axMin int
 		for k := range "ACTG" {
 			d := 0.
-			for _, ch := range []int{from, to.To} {
+			for _, ch := range []graph.NI{from, to.To} {
 				min := math.Inf(1)
 				for i, dch := range cost4[ch] {
 					if i != k {
@@ -322,37 +324,37 @@ func (u *UTree) MaxParsimonyEdge(from int, to graph.Half) float64 {
 }
 
 func (u *UTree) MaxParsimonyUnrooted() float64 {
-	kmMin := make(Kmers, len(u.T))
+	kmMin := make(Kmers, len(u.T.LabeledAdjacencyList))
 	for n, k := range u.Kmers {
-		if len(u.T[n]) > 1 {
+		if len(u.T.LabeledAdjacencyList[n]) > 1 {
 			kmMin[n] = append(DNA8{}, k...)
 		}
 	}
 	ctMin := make([]float64, len(u.Costs))
 	minCost := math.Inf(1) // return value
-	var df func(int, graph.Half)
-	df = func(from int, n graph.Half) {
+	var df func(graph.NI, graph.Half)
+	df = func(from graph.NI, n graph.Half) {
 		c := u.MaxParsimonyEdge(from, n)
 		if c < minCost {
 			minCost = c
 			for n, k := range u.Kmers {
-				if len(u.T[n]) > 1 {
+				if len(u.T.LabeledAdjacencyList[n]) > 1 {
 					copy(kmMin[n], k)
 				}
 			}
 			copy(ctMin, u.Costs)
 		}
-		for _, to := range u.T[n.To] {
+		for _, to := range u.T.LabeledAdjacencyList[n.To] {
 			if to.To != from {
 				df(n.To, to)
 			}
 		}
 	}
-	for _, to := range u.T[0] {
+	for _, to := range u.T.LabeledAdjacencyList[0] {
 		df(0, to)
 	}
 	for n, k := range kmMin {
-		if len(u.T[n]) > 1 {
+		if len(u.T.LabeledAdjacencyList[n]) > 1 {
 			copy(u.Kmers[n], k)
 		}
 	}
@@ -360,12 +362,12 @@ func (u *UTree) MaxParsimonyUnrooted() float64 {
 	return minCost
 }
 
-func (u *UTree) SwapEdges(a, ax, b, bx int) {
-	aTo := u.T[a]
-	bTo := u.T[b]
+func (u *UTree) SwapEdges(a graph.NI, ax int, b graph.NI, bx int) {
+	aTo := u.T.LabeledAdjacencyList[a]
+	bTo := u.T.LabeledAdjacencyList[b]
 
 	// flip a's reciprocal arc to b
-	to := u.T[aTo[ax].To] // neighbors of neighbor of a at index ax
+	to := u.T.LabeledAdjacencyList[aTo[ax].To] // neighbors of neighbor of a at index ax
 	rx := 0
 	for to[rx].To != a { // find index of reciprocal arc
 		rx++
@@ -373,7 +375,7 @@ func (u *UTree) SwapEdges(a, ax, b, bx int) {
 	to[rx].To = b // flip
 
 	// flip b's reciprocal arc to a
-	to = u.T[bTo[bx].To]
+	to = u.T.LabeledAdjacencyList[bTo[bx].To]
 	rx = 0
 	for to[rx].To != b {
 		rx++
@@ -384,9 +386,9 @@ func (u *UTree) SwapEdges(a, ax, b, bx int) {
 	aTo[ax], bTo[bx] = bTo[bx], aTo[ax]
 }
 
-func (u *UTree) SubTrees(a, b int) (w, x, y, z int) {
+func (u *UTree) SubTrees(a, b graph.NI) (w, x, y, z int) {
 	// set w, x to neighbor indexes of a
-	switch to := u.T[a]; b {
+	switch to := u.T.LabeledAdjacencyList[a]; b {
 	case to[0].To:
 		w, x = 1, 2
 	case to[1].To:
@@ -395,7 +397,7 @@ func (u *UTree) SubTrees(a, b int) (w, x, y, z int) {
 		w, x = 0, 1
 	}
 	// set y, z to neighbor indexes of b
-	switch to := u.T[b]; a {
+	switch to := u.T.LabeledAdjacencyList[b]; a {
 	case to[0].To:
 		y, z = 1, 2
 	case to[1].To:
@@ -409,8 +411,9 @@ func (u *UTree) SubTrees(a, b int) (w, x, y, z int) {
 func (u *UTree) MaxParsimony() float64 {
 	cRef := u.MaxParsimonyUnrooted()
 	cMin := cRef
-	var frMin, toMin, fxMin, txMin int
-	trySwaps := func(fr, to int) {
+	var frMin, toMin graph.NI
+	var fxMin, txMin int
+	trySwaps := func(fr, to graph.NI) {
 		_, x, y, z := u.SubTrees(fr, to)
 		u.SwapEdges(fr, x, to, y)     // swap once
 		c := u.MaxParsimonyUnrooted() // recompute
@@ -439,15 +442,16 @@ func (u *UTree) MaxParsimony() float64 {
 	for {
 		// iterate over internal edges (pick the half where to > fr)
 		// try MPU with swaps both ways, accumulating cMin and friends.
-		for fr, to := range u.T {
+		for fr, to := range u.T.LabeledAdjacencyList {
 			if len(to) < 3 {
 				continue // leaf, skip
 			}
 			for _, to := range to {
-				if len(u.T[to.To]) < 3 || to.To < fr {
+				if len(u.T.LabeledAdjacencyList[to.To]) < 3 ||
+					to.To < graph.NI(fr) {
 					continue
 				}
-				trySwaps(fr, to.To) // here's an edge to try
+				trySwaps(graph.NI(fr), to.To) // here's an edge to try
 			}
 		}
 		if cMin == cRef {

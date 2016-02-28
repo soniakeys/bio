@@ -5,7 +5,6 @@ import (
 	"log"
 
 	"github.com/soniakeys/bio"
-	"github.com/soniakeys/graph"
 )
 
 var strSDB = bio.Str("TAATTATTAA")
@@ -14,16 +13,20 @@ func ExampleStr_DeBruijn() {
 	fmt.Println("str:", strSDB)
 	g, jmers := strSDB.DeBruijn(4)
 	fmt.Println("DeBruijn graph:")
-	for n, to := range g {
+	for n, to := range g.AdjacencyList {
 		fmt.Println(jmers[n], n, to)
 	}
 	// an Eulerian path exists in a DeBruijn graph
-	p, err := graph.AdjacencyList(g).EulerianPath()
+	p, err := g.EulerianPath()
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println("Reconstructed path:", p)
-	r, err := jmers.OverlapKmers(p)
+	ord := make([]int, len(p))
+	for i, n := range p {
+		ord[i] = int(n)
+	}
+	r, err := jmers.OverlapKmers(ord)
 	if err != nil {
 		log.Fatal(err)
 	}

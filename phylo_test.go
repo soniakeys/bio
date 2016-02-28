@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/soniakeys/bio"
+	"github.com/soniakeys/graph"
 )
 
 func ExampleParseNewick() {
@@ -78,7 +79,7 @@ func ExamplePhyloRootedTree_CharacterTable() {
 	fmt.Println("76543210")
 	fmt.Println("--------")
 	for _, c := range rt.CharacterTable() {
-		fmt.Printf("%0*b\n", len(rt.Tree), &c)
+		fmt.Printf("%0*b\n", len(rt.Tree.AdjacencyList), &c)
 	}
 	// Output:
 	// 76543210
@@ -102,7 +103,7 @@ func ExamplePhyloRootedTree_CharacterTable_leafRoot() {
 	fmt.Println("76543210")
 	fmt.Println("--------")
 	for _, c := range rt.CharacterTable() {
-		fmt.Printf("%0*b\n", len(rt.Tree), &c)
+		fmt.Printf("%0*b\n", len(rt.Tree.AdjacencyList), &c)
 	}
 	// Output:
 	// 76543210
@@ -142,12 +143,12 @@ func ExamplePhyloRootedTree_MaxParsimony() {
 	// |   |   CTGCGCTG
 	// |   ATTGCGAC
 	// CAAATCCC
-	tree := [][]int{
-		4: []int{0, 1},
-		5: []int{2, 3},
-		6: []int{4, 5},
-	}
-	nodes := make([]bio.PhyloRootedNode, len(tree))
+	tree := graph.Directed{graph.AdjacencyList{
+		4: {0, 1},
+		5: {2, 3},
+		6: {4, 5},
+	}}
+	nodes := make([]bio.PhyloRootedNode, len(tree.AdjacencyList))
 	rt := &bio.PhyloRootedTree{
 		Tree:  tree,
 		Nodes: nodes,
@@ -190,12 +191,12 @@ func ExamplePhyloList_DistanceMatrix() {
 	//       1     |(6)  |(7)
 	//  (11)/ \(2) |     |
 	//     2   3   4     5
-	m := l.DistanceMatrix([]int{2, 3, 4, 5})
+	m := l.DistanceMatrix([]graph.NI{2, 3, 4, 5})
 	for _, r := range m {
 		fmt.Printf("%2.0f\n", r)
 	}
 	fmt.Println("-------")
-	m = l.DistanceMatrix([]int{5, 2})
+	m = l.DistanceMatrix([]graph.NI{5, 2})
 	for _, r := range m {
 		fmt.Printf("%2.0f\n", r)
 	}

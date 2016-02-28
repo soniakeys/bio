@@ -308,27 +308,27 @@ func (kmers StrKmers) OverlapKmers(order []int) (Seq, error) {
 
 type deBruijn struct {
 	jmers StrKmers
-	jNode map[Str]int
-	graph [][]int
+	jNode map[Str]graph.NI
+	g     graph.Directed
 }
 
 func newDeBruijn() *deBruijn {
-	return &deBruijn{jNode: map[Str]int{}}
+	return &deBruijn{jNode: map[Str]graph.NI{}}
 }
 
-func (d *deBruijn) node(jmer Str) int {
+func (d *deBruijn) node(jmer Str) graph.NI {
 	if n, ok := d.jNode[jmer]; ok {
 		return n
 	}
-	n := len(d.jmers)
+	n := graph.NI(len(d.jmers))
 	d.jNode[jmer] = n
 	d.jmers = append(d.jmers, jmer)
-	d.graph = append(d.graph, nil)
+	d.g.AdjacencyList = append(d.g.AdjacencyList, nil)
 	return n
 }
 
-func (d *deBruijn) arc(fr, to int) {
-	d.graph[fr] = append(d.graph[fr], to)
+func (d *deBruijn) arc(fr, to graph.NI) {
+	d.g.AdjacencyList[fr] = append(d.g.AdjacencyList[fr], to)
 }
 
 // DeBruijn constructs a DeBruijn graph from a multiset
@@ -337,7 +337,7 @@ func (d *deBruijn) arc(fr, to int) {
 // The graph represents overlaps of length k-1 of the kmers.
 // Nodes of the returned graph are labeled by
 // k-1-mer (jmer) substrings of the kmers.
-func (kmerFreq StrFreq) DeBruijn() (graph [][]int, jmers StrKmers, err error) {
+func (kmerFreq StrFreq) DeBruijn() (g graph.Directed, jmers StrKmers, err error) {
 	if len(kmerFreq) == 0 {
 		return
 	}
@@ -350,7 +350,8 @@ func (kmerFreq StrFreq) DeBruijn() (graph [][]int, jmers StrKmers, err error) {
 	d := newDeBruijn()
 	for kmer, mult := range kmerFreq {
 		if len(kmer) != k {
-			return nil, nil, errors.New("kmers have different length")
+			err = errors.New("kmers have different length")
+			return
 		}
 		fr := d.node(kmer[:j])
 		to := d.node(kmer[1:])
@@ -358,7 +359,7 @@ func (kmerFreq StrFreq) DeBruijn() (graph [][]int, jmers StrKmers, err error) {
 			d.arc(fr, to)
 		}
 	}
-	return d.graph, d.jmers, nil
+	return d.g, d.jmers, nil
 }
 
 // DeBruijn constructs a DeBruijn graph from a list of kmers.
@@ -366,7 +367,7 @@ func (kmerFreq StrFreq) DeBruijn() (graph [][]int, jmers StrKmers, err error) {
 // The graph represents overlaps of length k-1 of the kmers.
 // Nodes of the returned graph are labeled by
 // k-1-mer (jmer) substrings of the kmers.
-func (kmers StrKmers) DeBruijn() (graph [][]int, jmers StrKmers, err error) {
+func (kmers StrKmers) DeBruijn() (g graph.Directed, jmers StrKmers, err error) {
 	if len(kmers) == 0 {
 		return
 	}
@@ -375,13 +376,14 @@ func (kmers StrKmers) DeBruijn() (graph [][]int, jmers StrKmers, err error) {
 	d := newDeBruijn()
 	for _, kmer := range kmers {
 		if len(kmer) != k {
-			return nil, nil, errors.New("kmers have different length")
+			err = errors.New("kmers have different length")
+			return
 		}
 		fr := d.node(kmer[:j])
 		to := d.node(kmer[1:])
 		d.arc(fr, to)
 	}
-	return d.graph, d.jmers, nil
+	return d.g, d.jmers, nil
 }
 
 // DeBruijn constructs a DeBruijn graph from the kmer composition
@@ -390,7 +392,7 @@ func (kmers StrKmers) DeBruijn() (graph [][]int, jmers StrKmers, err error) {
 // The graph represents overlaps of the sequence of kmers in the string.
 // Overlaps are of length k-1.  Nodes of the returned graph are labeled by
 // k-1-mer (jmer) substrings of the kmers.
-func (s Str) DeBruijn(k int) (graph [][]int, jmers StrKmers) {
+func (s Str) DeBruijn(k int) (g graph.Directed, jmers StrKmers) {
 	d := newDeBruijn()
 	to := d.node(s[:k-1])
 	for i, j := 1, k; j <= len(s); i, j = i+1, j+1 {
@@ -398,32 +400,51 @@ func (s Str) DeBruijn(k int) (graph [][]int, jmers StrKmers) {
 		to = d.node(s[i:j])
 		d.arc(fr, to)
 	}
-	return d.graph, d.jmers
+	return d.g, d.jmers
 }
 
 // Contigs finds contigs in the DeBruijn graph represented by kmer list kmers.
-func (freq StrFreq) Contigs() (ps [][]int, jmers StrKmers, err error) {
-	var g graph.AdjacencyList
+func (freq StrFreq) Contigs() (cs []Seq, jmers StrKmers, err error) {
+	var g graph.Directed
 	g, jmers, err = freq.DeBruijn()
 	if err != nil {
 		return
 	}
-	return g.MaximalNonBranchingPaths(), jmers, nil
+	var s Seq
+	var ord []int
+	g.MaximalNonBranchingPaths(func(p []graph.NI) bool {
+		ord := ord[:0]
+		for _, n := range p {
+			ord = append(ord, int(n))
+		}
+		if s, err = jmers.OverlapKmers(ord); err == nil {
+			cs = append(cs, s)
+			return true
+		}
+		return false
+	})
+	return
 }
 
 // Contigs finds contigs in the DeBruijn graph represented by kmer list kmers.
-func (kmers StrKmers) Contigs() ([]Seq, error) {
-	var g graph.AdjacencyList
+func (kmers StrKmers) Contigs() (cs []Seq, err error) {
+	var g graph.Directed
 	g, jmers, err := kmers.DeBruijn()
 	if err != nil {
 		return nil, err
 	}
-	ps := g.MaximalNonBranchingPaths()
-	s := make([]Seq, len(ps))
-	for i, p := range ps {
-		s[i], _ = jmers.OverlapKmers(p) // (length already checked)
-	}
-	return s, nil
+	var s Seq
+	var ord []int
+	g.MaximalNonBranchingPaths(func(p []graph.NI) bool {
+		ord := ord[:0]
+		for _, n := range p {
+			ord = append(ord, int(n))
+		}
+		s, _ = jmers.OverlapKmers(ord) // (length already checked)
+		cs = append(cs, s)
+		return true
+	})
+	return
 }
 
 type DistFuncStr func(Str, Str) float64

@@ -10,11 +10,11 @@ import (
 )
 
 func ExampleDNA8MaxParsimonyRooted() {
-	tree := graph.AdjacencyList{
-		4: []int{0, 1},
-		5: []int{2, 3},
-		6: []int{4, 5},
-	}
+	tree := graph.Directed{graph.AdjacencyList{
+		4: {0, 1},
+		5: {2, 3},
+		6: {4, 5},
+	}}
 	leaves := bio.Kmers{
 		bio.DNA8("CAAATCCC"),
 		bio.DNA8("ATTGCGAC"),
@@ -56,14 +56,14 @@ func ExampleUTree_MaxParsimonyUnrooted() {
 	//
 	u := bio.UTree{
 		NLeaves: 4,
-		T: graph.LabeledAdjacencyList{
+		T: graph.UndirectedLabeled{graph.LabeledAdjacencyList{
 			0: {{To: 4, Label: 0}},
 			1: {{To: 4, Label: 1}},
 			2: {{To: 5, Label: 2}},
 			3: {{To: 5, Label: 3}},
 			4: {{To: 0, Label: 0}, {To: 1, Label: 1}, {To: 5, Label: 4}},
 			5: {{To: 2, Label: 2}, {To: 3, Label: 3}, {To: 4, Label: 4}},
-		},
+		}},
 		Kmers: bio.Kmers{
 			bio.DNA8("TCGGCCAA"),
 			bio.DNA8("CCTGGCTG"),
@@ -115,7 +115,7 @@ func TestSwapEdges(t *testing.T) {
 	//        (16)            (17)
 	//
 	// Test will swap lower edges from nodes 12 and 13.
-	u := bio.UTree{T: graph.LabeledAdjacencyList{
+	u := bio.UTree{T: graph.UndirectedLabeled{graph.LabeledAdjacencyList{
 		10: {{12, 20}},
 		11: {{13, 21}},
 		12: {{10, 20}, {13, 22}, {14, 23}},
@@ -124,14 +124,14 @@ func TestSwapEdges(t *testing.T) {
 		15: {{13, 24}, {17, 26}},
 		16: {{14, 25}},
 		17: {{15, 26}},
-	}}
+	}}}
 	u.SwapEdges(
 		12, // node 12
 		2,  // the lower edge is to node 14, at neighbor index 2
 		13, // node 13
 		1,  // lower edge is to node 15, at index 1
 	)
-	want := graph.LabeledAdjacencyList{
+	want := graph.UndirectedLabeled{graph.LabeledAdjacencyList{
 		10: {{12, 20}},
 		11: {{13, 21}},
 		// 12 should now have a half edge to 15, labled 24
@@ -144,7 +144,7 @@ func TestSwapEdges(t *testing.T) {
 		15: {{12, 24}, {17, 26}},
 		16: {{14, 25}},
 		17: {{15, 26}},
-	}
+	}}
 	if !reflect.DeepEqual(u.T, want) {
 		t.Fatal("rats.")
 	}

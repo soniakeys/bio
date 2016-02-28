@@ -58,7 +58,7 @@ func (pairs ReadPairList) ReadBreak(bk int) (ReadPairFreq, error) {
 	return ReadPairFreq{pairs.D + k - bk, m}, nil
 }
 
-func (pairs ReadPairList) OverlapSeq(order []int) (Seq, error) {
+func (pairs ReadPairList) OverlapSeq(order []graph.NI) (Seq, error) {
 	d := pairs.D
 	ps := pairs.Pairs
 	if len(order) <= d {
@@ -96,26 +96,26 @@ func (pairs ReadPairList) OverlapSeq(order []int) (Seq, error) {
 
 type pairDeBruijn struct {
 	jpairs []KmerPair
-	jNode  map[KmerPair]int
-	graph  [][]int
+	jNode  map[KmerPair]graph.NI
+	g      graph.Directed
 }
 
 func newPairDeBruijn() *pairDeBruijn {
-	return &pairDeBruijn{jNode: map[KmerPair]int{}}
+	return &pairDeBruijn{jNode: map[KmerPair]graph.NI{}}
 }
 
-func (pd *pairDeBruijn) node(jpair KmerPair) int {
+func (pd *pairDeBruijn) node(jpair KmerPair) graph.NI {
 	if n, ok := pd.jNode[jpair]; ok {
 		return n
 	}
-	n := len(pd.jpairs)
+	n := graph.NI(len(pd.jpairs))
 	pd.jNode[jpair] = n
 	pd.jpairs = append(pd.jpairs, jpair)
-	pd.graph = append(pd.graph, nil)
+	pd.g.AdjacencyList = append(pd.g.AdjacencyList, nil)
 	return n
 }
-func (pd *pairDeBruijn) arc(fr, to int) {
-	pd.graph[fr] = append(pd.graph[fr], to)
+func (pd *pairDeBruijn) arc(fr, to graph.NI) {
+	pd.g.AdjacencyList[fr] = append(pd.g.AdjacencyList[fr], to)
 }
 
 // DeBruijn constructs a DeBruijn graph from a list of kmer pairs.
@@ -123,7 +123,7 @@ func (pd *pairDeBruijn) arc(fr, to int) {
 // The graph represents overlaps of length k-1 of the kmers.
 // Nodes of the returned graph are labeled by
 // k-1-mer (jmer) substring pairs of the kmer pairs.
-func (pairs ReadPairList) DeBruijn() (graph [][]int, jpairs ReadPairList, err error) {
+func (pairs ReadPairList) DeBruijn() (g graph.Directed, jpairs ReadPairList, err error) {
 	ps := pairs.Pairs
 	if len(ps) == 0 {
 		return
@@ -133,48 +133,48 @@ func (pairs ReadPairList) DeBruijn() (graph [][]int, jpairs ReadPairList, err er
 	pd := newPairDeBruijn()
 	for _, pair := range ps {
 		if len(pair.A) != k || len(pair.B) != k {
-			return nil, ReadPairList{},
-				errors.New("kmers have different length")
+			err = errors.New("kmers have different length")
+			return
 		}
 		fr := pd.node(KmerPair{pair.A[:j], pair.B[:j]})
 		to := pd.node(KmerPair{pair.A[1:], pair.B[1:]})
 		pd.arc(fr, to)
 	}
-	return pd.graph, ReadPairList{pairs.D + 1, pd.jpairs}, nil
+	return pd.g, ReadPairList{pairs.D + 1, pd.jpairs}, nil
 }
 
 func (pairs ReadPairList) Contigs() (cs []Seq, err error) {
-	var g graph.AdjacencyList
+	var g graph.Directed
 	g, jpairs, err := pairs.DeBruijn()
 	if err != nil {
 		return nil, err
 	}
-	ps := g.MaximalNonBranchingPaths()
-	for _, p := range ps {
-		if s, err := jpairs.OverlapSeq(p); err == nil {
+	var s Seq
+	g.MaximalNonBranchingPaths(func(p []graph.NI) bool {
+		if s, err = jpairs.OverlapSeq(p); err == nil {
 			cs = append(cs, s)
-		} else {
-			fmt.Println(err)
+			return true
 		}
-	}
-	return cs, nil
+		return false
+	})
+	return
 }
 
 func (freq ReadPairFreq) Contigs() (cs []Seq, err error) {
-	var g graph.AdjacencyList
+	var g graph.Directed
 	g, jpairs, err := freq.DeBruijn()
 	if err != nil {
 		return nil, err
 	}
-	ps := g.MaximalNonBranchingPaths()
-	for _, p := range ps {
-		if s, err := jpairs.OverlapSeq(p); err == nil {
+	var s Seq
+	g.MaximalNonBranchingPaths(func(p []graph.NI) bool {
+		if s, err = jpairs.OverlapSeq(p); err == nil {
 			cs = append(cs, s)
-			//		} else {
-			//			fmt.Println(err)
+			return true
 		}
-	}
-	return cs, nil
+		return false
+	})
+	return
 }
 
 // DeBruijn constructs a DeBruijn graph from a frequency map of kmer pairs.
@@ -182,7 +182,7 @@ func (freq ReadPairFreq) Contigs() (cs []Seq, err error) {
 // The graph represents overlaps of length k-1 of the kmers.
 // Nodes of the returned graph are labeled by
 // k-1-mer (jmer) substring pairs of the kmer pairs.
-func (freq ReadPairFreq) DeBruijn() (graph [][]int, jpairs ReadPairList, err error) {
+func (freq ReadPairFreq) DeBruijn() (g graph.Directed, jpairs ReadPairList, err error) {
 	m := freq.Freq
 	if len(m) == 0 {
 		return
@@ -196,8 +196,8 @@ func (freq ReadPairFreq) DeBruijn() (graph [][]int, jpairs ReadPairList, err err
 	pd := newPairDeBruijn()
 	for pair, mult := range m {
 		if len(pair.A) != k || len(pair.B) != k {
-			return nil, ReadPairList{},
-				errors.New("kmers have different length")
+			err = errors.New("kmers have different length")
+			return
 		}
 		fr := pd.node(KmerPair{pair.A[:j], pair.B[:j]})
 		to := pd.node(KmerPair{pair.A[1:], pair.B[1:]})
@@ -205,5 +205,5 @@ func (freq ReadPairFreq) DeBruijn() (graph [][]int, jpairs ReadPairList, err err
 			pd.arc(fr, to)
 		}
 	}
-	return pd.graph, ReadPairList{freq.D + 1, pd.jpairs}, nil
+	return pd.g, ReadPairList{freq.D + 1, pd.jpairs}, nil
 }

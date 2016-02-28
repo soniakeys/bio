@@ -24,8 +24,8 @@ import (
 // method set.
 type PhyloList struct {
 	List       graph.FromList    // tree encoded as a parent list
+	Root       graph.NI          // root node of tree
 	Nodes      []PhyloRootedNode // parallel to Tree
-	Root       int               // root node of tree
 	NumLeaves  int               // count of leaf nodes
 	NumNames   int               // count of Name > ""
 	NumWeights int               // count of HasWt == true
@@ -37,9 +37,9 @@ type PhyloList struct {
 //
 // In this representation arcs are directed from the root toward the leaves.
 type PhyloRootedTree struct {
-	Tree       [][]int           // adjacency list tree structure
+	Tree       graph.Directed    // adjacency list tree structure
+	Root       graph.NI          // root node of tree
 	Nodes      []PhyloRootedNode // parallel to Tree
-	Root       int               // root node of tree
 	NumLeaves  int               // count of leaf nodes
 	NumNames   int               // count of Name > ""
 	NumWeights int               // count of HasWt == true
@@ -66,8 +66,12 @@ func (l *PhyloList) RootedTree() *PhyloRootedTree {
 
 // List constructs a PhyloList equivalent to a PhyloRootedTree.
 func (t *PhyloRootedTree) List() *PhyloList {
+	l, n := t.Tree.FromList()
+	if n < 0 {
+		return nil
+	}
 	return &PhyloList{
-		List:       graph.AdjacencyList(t.Tree).FromList(),
+		List:       *l,
 		Nodes:      t.Nodes,
 		Root:       t.Root,
 		NumLeaves:  t.NumLeaves,
@@ -79,9 +83,9 @@ func (t *PhyloRootedTree) List() *PhyloList {
 // Newick serializes to Newick format.
 func (t *PhyloRootedTree) Newick() string {
 	tr := t.Tree
-	var f func(int) string
-	f = func(p int) (s string) {
-		to := tr[p]
+	var f func(graph.NI) string
+	f = func(p graph.NI) (s string) {
+		to := tr.AdjacencyList[p]
 		if len(to) > 0 { // format children
 			c := make([]string, len(to))
 			for i, to := range to {
@@ -162,14 +166,14 @@ func (p *newickParser) gettok() {
 	}
 }
 
-func (p *newickParser) parseSubtree(n int) (err error) {
+func (p *newickParser) parseSubtree(n graph.NI) (err error) {
 	if p.tok == "(" {
 		// internal node
 		return p.parseSet(n)
 	}
 	// leaf node
 	p.pl.NumLeaves++
-	p.pl.List.Leaves.SetBit(&p.pl.List.Leaves, n, 1)
+	p.pl.List.Leaves.SetBit(&p.pl.List.Leaves, int(n), 1)
 	if p.tok != ")" && p.tok != "," {
 		err = p.nameWeight(n)
 	}
@@ -177,7 +181,7 @@ func (p *newickParser) parseSubtree(n int) (err error) {
 }
 
 // add name and weight to node
-func (p *newickParser) nameWeight(n int) (err error) {
+func (p *newickParser) nameWeight(n graph.NI) (err error) {
 	pn := &p.pl.Nodes[n]
 	tok := p.tok
 	if w := strings.Index(tok, ":"); w >= 0 {
@@ -196,7 +200,7 @@ func (p *newickParser) nameWeight(n int) (err error) {
 	return nil
 }
 
-func (p *newickParser) parseSet(n int) error {
+func (p *newickParser) parseSet(n graph.NI) error {
 	p.gettok()                  // get token after (
 	fl := &p.pl.List            // dereference FromList
 	pLen := fl.Paths[n].Len + 1 // path length to nodes in this set
@@ -205,7 +209,7 @@ func (p *newickParser) parseSet(n int) error {
 	}
 	for {
 		// create child node
-		cn := len(fl.Paths)
+		cn := graph.NI(len(fl.Paths))
 		fl.Paths = append(fl.Paths, graph.PathEnd{From: n, Len: pLen})
 		p.pl.Nodes = append(p.pl.Nodes, PhyloRootedNode{})
 
@@ -232,17 +236,17 @@ func (p *newickParser) parseSet(n int) error {
 }
 
 // PathLen returns the number of arcs between the nodes.
-func (l *PhyloList) PathLen(a, b int) int {
+func (l *PhyloList) PathLen(a, b graph.NI) int {
 	p := l.List.Paths
 	return p[a].Len + p[b].Len - 2*p[l.List.CommonAncestor(a, b)].Len
 }
 
 // Distance returns the sum of arc weights between two nodes
-func (l *PhyloList) Distance(a, b int) (d float64) {
+func (l *PhyloList) Distance(a, b graph.NI) (d float64) {
 	// code similar to graph.CommonAncestor
 	p := l.List.Paths
 	n := l.Nodes
-	if a < 0 || b < 0 || a >= len(p) || b >= len(p) {
+	if a < 0 || b < 0 || a >= graph.NI(len(p)) || b >= graph.NI(len(p)) {
 		return math.NaN()
 	}
 	if p[a].Len < p[b].Len {
@@ -265,11 +269,11 @@ func (l *PhyloList) Distance(a, b int) (d float64) {
 // Only named nodes are included in the map and names are assumed to be
 // unique.  That is, each distinct non-empty name will map to a single node
 // index.
-func (l *PhyloList) NodeMap() map[string]int {
-	m := map[string]int{}
+func (l *PhyloList) NodeMap() map[string]graph.NI {
+	m := map[string]graph.NI{}
 	for n, nd := range l.Nodes {
 		if nd.Name > "" {
-			m[nd.Name] = n
+			m[nd.Name] = graph.NI(n)
 		}
 	}
 	return m
@@ -284,14 +288,14 @@ func (l *PhyloList) NodeMap() map[string]int {
 // pointed to by the arc, other bits will be 0.
 func (t *PhyloRootedTree) CharacterTable() []big.Int {
 	g := t.Tree
-	chars := make([]big.Int, 0, len(g)-3)
-	var f func(int) big.Int
-	f = func(p int) big.Int {
+	chars := make([]big.Int, 0, len(g.AdjacencyList)-3)
+	var f func(graph.NI) big.Int
+	f = func(p graph.NI) big.Int {
 		var pb big.Int
-		pb.SetBit(&pb, p, 1)
-		for _, to := range g[p] {
+		pb.SetBit(&pb, int(p), 1)
+		for _, to := range g.AdjacencyList[p] {
 			tb := f(to)
-			if len(g[to]) > 0 {
+			if len(g.AdjacencyList[to]) > 0 {
 				chars = append(chars, tb)
 			}
 			pb.Or(&pb, &tb)
@@ -299,7 +303,7 @@ func (t *PhyloRootedTree) CharacterTable() []big.Int {
 		return pb
 	}
 	n := t.Root
-	if to := g[n]; len(to) == 1 {
+	if to := g.AdjacencyList[n]; len(to) == 1 {
 		n = to[0] // skip root leaf
 	}
 	f(n)
@@ -376,13 +380,13 @@ func (sk StrKmers) CharacterTable() (ct []big.Int, pos []int, err error) {
 // weights to all nodes of the tree.  The root will be assigned weight 0,
 // but with HasWeight set to false.
 func (t *PhyloRootedTree) MaxParsimony(kmers Kmers) (total int) {
-	tree := t.Tree
+	tree := t.Tree.AdjacencyList
 	nodes := t.Nodes
 	cost4 := make([][4]float64, len(tree)) // (dis)parsimony scores
 	inf4 := [4]float64{math.Inf(1), math.Inf(1), math.Inf(1), math.Inf(1)}
 
-	var score func(int, int)
-	score = func(n, sx int) {
+	var score func(graph.NI, int)
+	score = func(n graph.NI, sx int) {
 		if len(tree[n]) == 0 {
 			copy(cost4[n][:], inf4[:])
 			cost4[n][kmers[n][sx]>>1&3] = 0
@@ -413,8 +417,8 @@ func (t *PhyloRootedTree) MaxParsimony(kmers Kmers) (total int) {
 		//fmt.Println("node", n, "scored:", dis[n])
 	}
 
-	var labelNodes func(int, int, int)
-	labelNodes = func(n, sx, axp int) {
+	var labelNodes func(graph.NI, int, int)
+	labelNodes = func(n graph.NI, sx, axp int) {
 		if len(tree[n]) == 0 { // leaf nodes come with labels
 			// just need to note distance
 			if int(kmers[n][sx]>>1&3) != axp {
@@ -464,7 +468,7 @@ func (t *PhyloRootedTree) MaxParsimony(kmers Kmers) (total int) {
 }
 
 // DistanceMatrix constructs a distance matrix from a PhyloList.
-func (l *PhyloList) DistanceMatrix(leaves []int) [][]float64 {
+func (l *PhyloList) DistanceMatrix(leaves []graph.NI) [][]float64 {
 	m := make([][]float64, len(leaves))
 	for i := range m {
 		m[i] = make([]float64, len(leaves))

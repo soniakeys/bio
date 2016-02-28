@@ -8,7 +8,6 @@ import (
 	"testing"
 
 	"github.com/soniakeys/bio"
-	"github.com/soniakeys/graph"
 )
 
 func ExampleStr_PDistance() {
@@ -167,11 +166,15 @@ func TestStrFreq_DeBruijn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := graph.AdjacencyList(g).EulerianPath()
+	p, err := g.EulerianPath()
 	if err != nil {
 		t.Fatal(err)
 	}
-	r, err := jmers.OverlapKmers(p)
+	ord := make([]int, len(p))
+	for i, n := range p {
+		ord[i] = int(n)
+	}
+	r, err := jmers.OverlapKmers(ord)
 	if err != nil {
 		t.Fatal(err)
 	}
