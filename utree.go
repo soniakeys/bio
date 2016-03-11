@@ -18,7 +18,7 @@ import (
 // cost labeled edges.
 type UTree struct {
 	NLeaves int
-	T       graph.UndirectedLabeled // len(T) is 2*NLeaves-2
+	T       graph.LabeledUndirected // len(T) is 2*NLeaves-2
 	Kmers   Kmers                   // len(Kmers) is len(T)
 	Costs   []float64               // edge costs, len(Costs) = len(T)-1
 }
@@ -134,7 +134,7 @@ func DNA8MaxParsimonyRooted(g graph.Directed, leaves Kmers) (kmers Kmers, costs 
 // Returned kmers will be the leaves argument with appended kmers labeling
 // internal nodes and the root.  Returned cost slice is indexed by the
 // graph edge labels.
-func dna8MaxParsimonyUnrooted(g graph.UndirectedLabeled, leaves Kmers) (kmers Kmers, costs []float64) {
+func dna8MaxParsimonyUnrooted(g graph.LabeledUndirected, leaves Kmers) (kmers Kmers, costs []float64) {
 	tree := g.LabeledAdjacencyList
 	// for each edge, construct rooted tree, call DNA8MaxParsimonyRooted().
 	// df traversal to get each edge just once.

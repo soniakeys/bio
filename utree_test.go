@@ -56,7 +56,7 @@ func ExampleUTree_MaxParsimonyUnrooted() {
 	//
 	u := bio.UTree{
 		NLeaves: 4,
-		T: graph.UndirectedLabeled{graph.LabeledAdjacencyList{
+		T: graph.LabeledUndirected{graph.LabeledAdjacencyList{
 			0: {{To: 4, Label: 0}},
 			1: {{To: 4, Label: 1}},
 			2: {{To: 5, Label: 2}},
@@ -115,7 +115,7 @@ func TestSwapEdges(t *testing.T) {
 	//        (16)            (17)
 	//
 	// Test will swap lower edges from nodes 12 and 13.
-	u := bio.UTree{T: graph.UndirectedLabeled{graph.LabeledAdjacencyList{
+	u := bio.UTree{T: graph.LabeledUndirected{graph.LabeledAdjacencyList{
 		10: {{12, 20}},
 		11: {{13, 21}},
 		12: {{10, 20}, {13, 22}, {14, 23}},
@@ -131,7 +131,7 @@ func TestSwapEdges(t *testing.T) {
 		13, // node 13
 		1,  // lower edge is to node 15, at index 1
 	)
-	want := graph.UndirectedLabeled{graph.LabeledAdjacencyList{
+	want := graph.LabeledUndirected{graph.LabeledAdjacencyList{
 		10: {{12, 20}},
 		11: {{13, 21}},
 		// 12 should now have a half edge to 15, labled 24
