@@ -238,27 +238,30 @@ func (p *newickParser) parseSet(n graph.NI) error {
 // PathLen returns the number of arcs between the nodes.
 func (l *PhyloList) PathLen(a, b graph.NI) int {
 	p := l.List.Paths
-	return p[a].Len + p[b].Len - 2*p[l.List.CommonAncestor(a, b)].Len
+	return p[a].Len + p[b].Len - 2*p[l.List.CommonStart(a, b)].Len
 }
 
 // Distance returns the sum of arc weights between two nodes
 func (l *PhyloList) Distance(a, b graph.NI) (d float64) {
-	// code similar to graph.CommonAncestor
+	// code similar to graph.CommonStart
 	p := l.List.Paths
 	n := l.Nodes
-	if a < 0 || b < 0 || a >= graph.NI(len(p)) || b >= graph.NI(len(p)) {
-		return math.NaN()
-	}
 	if p[a].Len < p[b].Len {
 		a, b = b, a
 	}
 	for bl := p[b].Len; p[a].Len > bl; {
 		d += n[a].Weight
 		a = p[a].From
+		if a < 0 {
+			return math.NaN()
+		}
 	}
 	for a != b {
 		d += n[a].Weight + n[b].Weight
 		a = p[a].From
+		if a < 0 {
+			return math.NaN()
+		}
 		b = p[b].From
 	}
 	return d
