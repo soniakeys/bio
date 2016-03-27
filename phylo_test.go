@@ -16,7 +16,7 @@ func ExampleParseNewick() {
 	for n, nn := range rt.Nodes {
 		fmt.Printf("\u00a0%2d   %-5s  %9t %7.1f %5d %11d %12d\n",
 			n, nn.Name, nn.HasWeight, nn.Weight,
-			p[n].From, p[n].Len, rt.List.Leaves.Bit(n))
+			p[n].From, p[n].Len, rt.List.Leaves.Bit(graph.NI(n)))
 	}
 	fmt.Println("Max path len to root:", rt.List.MaxLen)
 	// Output:

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/big"
 	"strconv"
 	"strings"
 
@@ -173,7 +172,7 @@ func (p *newickParser) parseSubtree(n graph.NI) (err error) {
 	}
 	// leaf node
 	p.pl.NumLeaves++
-	p.pl.List.Leaves.SetBit(&p.pl.List.Leaves, int(n), 1)
+	p.pl.List.Leaves.SetBit(n, 1)
 	if p.tok != ")" && p.tok != "," {
 		err = p.nameWeight(n)
 	}
@@ -284,29 +283,30 @@ func (l *PhyloList) NodeMap() map[string]graph.NI {
 
 // CharacterTable lists non-trivial characters of a phylogenetic tree.
 //
-// A character is represented as bits of a big.Int with bits set by node number
+// A character is represented a graph.Bits with bits set by node number
 // of the tree.  A non-trivial character corresponds to an internal arc of
 // the tree; that is, an arc not connecting a leaf node.  For a single
-// character, bits of the big.Int will be set to 1 for nodes of the subtree
+// character, bits will be set to 1 for nodes of the subtree
 // pointed to by the arc, other bits will be 0.
-func (t *PhyloRootedTree) CharacterTable() []big.Int {
+func (t *PhyloRootedTree) CharacterTable() []graph.Bits {
 	g := t.Tree
-	chars := make([]big.Int, 0, len(g.AdjacencyList)-3)
-	var f func(graph.NI) big.Int
-	f = func(p graph.NI) big.Int {
-		var pb big.Int
-		pb.SetBit(&pb, int(p), 1)
-		for _, to := range g.AdjacencyList[p] {
+	a := g.AdjacencyList
+	chars := make([]graph.Bits, 0, len(a)-3)
+	var f func(graph.NI) graph.Bits
+	f = func(p graph.NI) graph.Bits {
+		var pb graph.Bits
+		pb.SetBit(p, 1)
+		for _, to := range a[p] {
 			tb := f(to)
-			if len(g.AdjacencyList[to]) > 0 {
+			if len(a[to]) > 0 {
 				chars = append(chars, tb)
 			}
-			pb.Or(&pb, &tb)
+			pb.Or(pb, tb)
 		}
 		return pb
 	}
 	n := t.Root
-	if to := g.AdjacencyList[n]; len(to) == 1 {
+	if to := a[n]; len(to) == 1 {
 		n = to[0] // skip root leaf
 	}
 	f(n)
@@ -324,7 +324,7 @@ func (t *PhyloRootedTree) CharacterTable() []big.Int {
 //
 // At least four strings are required.  An error is returned for < 4 strings
 // or for strings of unequal length.
-func (sk StrKmers) CharacterTable() (ct []big.Int, pos []int, err error) {
+func (sk StrKmers) CharacterTable() (ct []graph.Bits, pos []int, err error) {
 	if len(sk) < 4 {
 		return nil, nil, errors.New("not enough strings to characterize")
 	}
@@ -356,10 +356,10 @@ func (sk StrKmers) CharacterTable() (ct []big.Int, pos []int, err error) {
 			continue // no or trivial split
 		}
 		// loop 2, add character
-		var c big.Int
+		var c graph.Bits
 		for p, s := range sk {
 			if s[i] != modal {
-				c.SetBit(&c, p, 1)
+				c.SetBit(graph.NI(p), 1)
 			}
 		}
 		ct = append(ct, c)
