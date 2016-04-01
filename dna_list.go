@@ -374,7 +374,7 @@ func (x Kmers) LaplaceProfile() FracProfile {
 }
 
 // newPseudoProfile allocates a FracProfile matrix for string length k,
-// initializing all elements with pseudocount probabilty p.
+// initializing all elements with pseudocount probability p.
 func newPseudoProfile(k int, p float64) FracProfile {
 	a := make(FracProfile, k)
 	p4 := [4]float64{p, p, p, p}

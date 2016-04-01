@@ -8,7 +8,7 @@ import (
 	"github.com/soniakeys/bio"
 )
 
-func ExampleKmerReadPairs_ReadBreak() {
+func ExampleReadPairList_ReadBreak() {
 	ps := bio.ReadPairList{2, []bio.KmerPair{
 		{"ABCD", "GHIJ"},
 		{"CDEF", "IJKL"},

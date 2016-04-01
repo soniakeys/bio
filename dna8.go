@@ -100,7 +100,7 @@ ij:
 //  k is the k-mer length.
 //
 // This variant works for large k, but at the expense of allocated copy of s.
-// See ModalSmallKmers for a variant more efficent with small k.
+// See ModalSmallKmers for a variant more efficient with small k.
 func (s DNA8) ModalKmers(k int) Kmers {
 	ms := Str(s).ModalKmers(k) // call string version; it uses a map.
 	m := make(Kmers, len(ms))

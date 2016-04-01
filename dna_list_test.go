@@ -63,7 +63,7 @@ func ExampleKmers_Entropy() {
 	// 3.54
 }
 
-func ExampleKmers_Entropies() {
+func ExampleKmers_EntropyContributions() {
 	k := bio.Kmers{
 		bio.DNA8("GtCG"),
 		bio.DNA8("GCtG"),

@@ -134,9 +134,9 @@ func TestSwapEdges(t *testing.T) {
 	want := graph.LabeledUndirected{graph.LabeledAdjacencyList{
 		10: {{12, 20}},
 		11: {{13, 21}},
-		// 12 should now have a half edge to 15, labled 24
+		// 12 should now have a half edge to 15, labeled 24
 		12: {{10, 20}, {13, 22}, {15, 24}},
-		// 13 should now have a half edge to 14, labled 23
+		// 13 should now have a half edge to 14, labeled 23
 		13: {{11, 21}, {14, 23}, {12, 22}},
 		// 14 should now have a half edge back to 13, labeled 23
 		14: {{13, 23}, {16, 25}},

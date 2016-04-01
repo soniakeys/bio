@@ -135,7 +135,7 @@ read:
 		case f.Header > "":
 			f.Seq = append(f.Seq, line...)
 		default:
-			// ignore inital data without Header?
+			// ignore initial data without Header?
 		}
 	}
 	return f, err

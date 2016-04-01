@@ -7,7 +7,7 @@ package bio
 //
 // DNA is expected to generally hold DNA base symbols but other symbols are
 // allowed.  Methods on the type process both upper and lower case symbols
-// for the four DNA bases.  Methods accomodate other symbols but generally
+// for the four DNA bases.  Methods accommodate other symbols but generally
 // do not process them except as documented.
 type DNA []byte
 

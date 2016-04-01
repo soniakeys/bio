@@ -15,7 +15,7 @@ import (
 // It has node names and arc weights as in the Newick format.
 //
 // This is a compact and fairly minimimal representation that still
-// facilites computation.  In this representation arcs are directed
+// facilitates computation.  In this representation arcs are directed
 // from the leaves toward the root.
 //
 // Some algorithms require a different representation however.
