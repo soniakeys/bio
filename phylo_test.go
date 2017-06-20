@@ -16,7 +16,7 @@ func ExampleParseNewick() {
 	for n, nn := range rt.Nodes {
 		fmt.Printf("\u00a0%2d   %-5s  %9t %7.1f %5d %11d %12d\n",
 			n, nn.Name, nn.HasWeight, nn.Weight,
-			p[n].From, p[n].Len, rt.List.Leaves.Bit(graph.NI(n)))
+			p[n].From, p[n].Len, rt.List.Leaves.Bit(n))
 	}
 	fmt.Println("Max path len to root:", rt.List.MaxLen)
 	// Output:
@@ -79,7 +79,7 @@ func ExamplePhyloRootedTree_CharacterTable() {
 	fmt.Println("76543210")
 	fmt.Println("--------")
 	for _, c := range rt.CharacterTable() {
-		fmt.Printf("%0*b\n", len(rt.Tree.AdjacencyList), &c)
+		fmt.Println(c)
 	}
 	// Output:
 	// 76543210
@@ -103,7 +103,7 @@ func ExamplePhyloRootedTree_CharacterTable_leafRoot() {
 	fmt.Println("76543210")
 	fmt.Println("--------")
 	for _, c := range rt.CharacterTable() {
-		fmt.Printf("%0*b\n", len(rt.Tree.AdjacencyList), &c)
+		fmt.Println(c)
 	}
 	// Output:
 	// 76543210
@@ -124,7 +124,7 @@ func ExampleStrKmers_CharacterTable() {
 	fmt.Println("-----  -")
 	ct, pos, _ := sk.CharacterTable()
 	for i, c := range ct {
-		fmt.Printf("%0*b  %d\n", len(sk), &c, pos[i])
+		fmt.Println(c, "", pos[i])
 	}
 	// Output:
 	// 43210  Position

@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/soniakeys/bits"
 	"github.com/soniakeys/graph"
 )
 
@@ -53,8 +54,9 @@ type PhyloRootedNode struct {
 
 // RootedTree construsts a PhyloRootedTree equivalent to a PhyloList.
 func (l *PhyloList) RootedTree() *PhyloRootedTree {
+	t, _ := l.List.Transpose(nil)
 	return &PhyloRootedTree{
-		Tree:       l.List.Transpose(),
+		Tree:       t,
 		Nodes:      l.Nodes,
 		Root:       l.Root,
 		NumLeaves:  l.NumLeaves,
@@ -142,6 +144,7 @@ func ParseNewick(s string) (*PhyloList, error) {
 		// fmt.Println("debug: p.rem:", p.rem)
 		return nil, errors.New("unparsed text follows complete tree: " + p.rem)
 	}
+	pl.List.RecalcLeaves()
 	return pl, nil
 }
 
@@ -172,7 +175,6 @@ func (p *newickParser) parseSubtree(n graph.NI) (err error) {
 	}
 	// leaf node
 	p.pl.NumLeaves++
-	p.pl.List.Leaves.SetBit(n, 1)
 	if p.tok != ")" && p.tok != "," {
 		err = p.nameWeight(n)
 	}
@@ -283,19 +285,19 @@ func (l *PhyloList) NodeMap() map[string]graph.NI {
 
 // CharacterTable lists non-trivial characters of a phylogenetic tree.
 //
-// A character is represented a graph.Bits with bits set by node number
+// A character is represented a bits.Bits with bits set by node number
 // of the tree.  A non-trivial character corresponds to an internal arc of
 // the tree; that is, an arc not connecting a leaf node.  For a single
 // character, bits will be set to 1 for nodes of the subtree
 // pointed to by the arc, other bits will be 0.
-func (t *PhyloRootedTree) CharacterTable() []graph.Bits {
+func (t *PhyloRootedTree) CharacterTable() []bits.Bits {
 	g := t.Tree
 	a := g.AdjacencyList
-	chars := make([]graph.Bits, 0, len(a)-3)
-	var f func(graph.NI) graph.Bits
-	f = func(p graph.NI) graph.Bits {
-		var pb graph.Bits
-		pb.SetBit(p, 1)
+	chars := make([]bits.Bits, 0, len(a)-3)
+	var f func(graph.NI) bits.Bits
+	f = func(p graph.NI) bits.Bits {
+		pb := bits.New(len(a))
+		pb.SetBit(int(p), 1)
 		for _, to := range a[p] {
 			tb := f(to)
 			if len(a[to]) > 0 {
@@ -324,7 +326,7 @@ func (t *PhyloRootedTree) CharacterTable() []graph.Bits {
 //
 // At least four strings are required.  An error is returned for < 4 strings
 // or for strings of unequal length.
-func (sk StrKmers) CharacterTable() (ct []graph.Bits, pos []int, err error) {
+func (sk StrKmers) CharacterTable() (ct []bits.Bits, pos []int, err error) {
 	if len(sk) < 4 {
 		return nil, nil, errors.New("not enough strings to characterize")
 	}
@@ -356,10 +358,10 @@ func (sk StrKmers) CharacterTable() (ct []graph.Bits, pos []int, err error) {
 			continue // no or trivial split
 		}
 		// loop 2, add character
-		var c graph.Bits
+		c := bits.New(len(sk))
 		for p, s := range sk {
 			if s[i] != modal {
-				c.SetBit(graph.NI(p), 1)
+				c.SetBit(p, 1)
 			}
 		}
 		ct = append(ct, c)
