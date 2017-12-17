@@ -67,8 +67,8 @@ func (l *PhyloList) RootedTree() *PhyloRootedTree {
 
 // List constructs a PhyloList equivalent to a PhyloRootedTree.
 func (t *PhyloRootedTree) List() *PhyloList {
-	l, n := t.Tree.FromList()
-	if n < 0 {
+	l, s := t.Tree.FromList()
+	if !s {
 		return nil
 	}
 	return &PhyloList{
